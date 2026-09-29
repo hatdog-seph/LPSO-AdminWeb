@@ -1,8 +1,3 @@
-// Libmanan municipality location guard.
-// Uses the published Libmanan map extent as a local, offline-safe geofence.
-// This intentionally has no network dependency so the app can render normally
-// even when the boundary service is unavailable or blocked by CORS.
-
 export const LIBMANAN_CENTER = [13.6938, 123.0620];
 
 // south, west, north, east — Libmanan, Camarines Sur

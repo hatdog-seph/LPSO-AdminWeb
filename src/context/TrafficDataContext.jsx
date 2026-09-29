@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { isInsideLibmanan } from "../data/libmananGeofence.js";
 import { supabase } from "../lib/supabaseClient.js";
-import { sha256Hex } from "../lib/hashPassword.js";
 
 const NOTIF_STORAGE = "eticket-traffic-notifications";
 
@@ -423,29 +422,28 @@ export function TrafficDataProvider({ children }) {
     if (password.length < 6) return { ok: false, error: "Password must be at least 6 characters." };
 
     const enforcerId = `ENF-${Date.now().toString(36).toUpperCase()}`;
-    const passwordHash = await sha256Hex(password);
 
-    const { data: row, error } = await supabase
-      .from("enforcer")
-      .insert({
-        enforcer_id: enforcerId,
-        registration_id: "",
-        full_name: name,
-        badge_number: badge,
-        username: badge,
-        password_hash: passwordHash,
-        role,
-      })
-      .select("enforcer_id, registration_id, full_name, badge_number, username, role")
-      .single();
+    // password is hashed with bcrypt server-side (see the create_enforcer Postgres
+    // function) - the plaintext only ever travels over HTTPS to Supabase, it's never
+    // hashed or stored in the browser, so there's no client-side hashing step here.
+    const { data: rows, error } = await supabase.rpc("create_enforcer", {
+      p_enforcer_id: enforcerId,
+      p_registration_id: "",
+      p_full_name: name,
+      p_badge_number: badge,
+      p_username: badge,
+      p_password: password,
+      p_role: role,
+    });
 
     if (error) {
-      const message = error.code === "23505"
+      const message = error.code === "23505" || /duplicate key/i.test(error.message)
         ? `Badge number "${badge}" is already registered.`
         : error.message;
       return { ok: false, error: message };
     }
 
+    const row = { ...(Array.isArray(rows) ? rows[0] : rows), username: badge };
     setEnforcers(prev => [...prev, fromEnforcerRow(row)].sort((a, b) => a.name.localeCompare(b.name)));
     addNotification({ title: "Enforcer Registered", message: `${name} (badge ${badge}) can now log into the enforcer app.` });
     return { ok: true };
