@@ -93,7 +93,7 @@ function MiniTable({ rows, onOpen }) {
       <thead>
         <tr>
           {[
-            "Citation",
+            "Ticket ID",
             "Motorist",
             "Zone",
             "Issued",

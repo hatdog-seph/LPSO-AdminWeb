@@ -110,13 +110,13 @@ export default function CitationsView() {
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: C.surfaceSunk }}>
-              {["Citation", "Motorist / Plate", "Violation", "Officer", "Barangay", "Date", "Status", "Actions"].map(h =>
+              {["Ticket ID", "Motorist / Plate", "Violation", "Officer", "Barangay", "Date", "Status", "Actions"].map(h =>
                 <th key={h} style={{ textAlign: "left", fontSize: 10.5, color: C.inkFaint, fontWeight: 700, padding: "10px", textTransform: "uppercase" }}>{h}</th>)}
             </tr></thead>
             <tbody>
               {filtered.map(c => (
                 <tr key={c.id} className="et-row">
-                  <td style={cellStyle}><span className="et-mono">{c.id}</span></td>
+                  <td style={cellStyle}><span className="et-mono">{c.ticket || c.id}</span></td>
                   <td style={cellStyle}><div style={{ fontWeight: 600 }}>{c.motorist}</div><div style={{ fontSize: 10.5, color: C.inkFaint }}>{c.plateNumber}</div></td>
                   <td style={cellStyle}><div>{c.violation}</div><div style={{ fontSize: 10.5, color: C.inkFaint }}>{c.ordinance?.code || c.ordinanceId || "No ordinance linked"} · ₱{Number(c.amount || 0).toLocaleString("en-PH")}</div></td>
                   <td style={cellStyle}>{c.officer}</td>
