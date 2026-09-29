@@ -1,6 +1,6 @@
 import { C } from "../theme.js";
 
-export const STATUSES = ["Paid", "Pending", "Overdue", "Contested"];
+export const STATUSES = ["Settled", "Pending", "Overdue", "Contested"];
 
 /* ---------------------------------------------------------------
    HELPERS
