@@ -5,13 +5,7 @@ import { sha256Hex } from "../lib/hashPassword.js";
 
 const NOTIF_STORAGE = "eticket-traffic-notifications";
 
-// The barangay list (id, name, lat, lng) used to be a hardcoded array here
-// (and separately duplicated in the motorist portal backend and the
-// enforcer app). It now lives in one place - the `barangay` table in
-// Supabase - so correcting a name or a centroid is one UPDATE statement,
-// not a redeploy of three codebases. See TrafficDataProvider's `barangays`
-// state below for the live-fetched list; this helper just does the
-// nearest-centroid math against whatever list it's given.
+
 function nearestBarangay(barangays, position) {
   if (!Array.isArray(position) || position.length < 2) return null;
   let nearest = null;
@@ -169,9 +163,6 @@ function fromCitationRow(row, barangays) {
     vehicle: row.vehicle ? { type: row.vehicle.vehicle_type, plate: row.vehicle.plate_number } : null,
     vehicleId: row.vehicle_id,
     motoristId: row.motorist_id,
-    // An empty string here is a real, confirmed "No License" answer from
-    // the enforcer app, not missing data - only a genuinely absent
-    // motorist record should read as "no data" (null).
     license: row.motorist ? (row.motorist.license_number || "No License") : null,
     ordinanceId: row.ordinance_id,
     ordinance,
@@ -222,8 +213,7 @@ export function TrafficDataProvider({ children }) {
     { id: Date.now(), title, message, time: new Date().toLocaleTimeString() }, ...prev,
   ].slice(0, 8));
 
-  // Reference data (rarely changes), fetched once and shared by every view
-  // that used to import a hardcoded BARANGAYS array.
+
   const refreshBarangays = async () => {
     setBarangaysLoading(true);
     const { data, error } = await supabase
@@ -253,16 +243,10 @@ export function TrafficDataProvider({ children }) {
     setCitationsLoading(false);
   };
 
-  // Re-run once the barangay list actually arrives, so citations loaded
-  // before it was ready still get their fallback barangay resolved instead
-  // of being stuck with the empty list from the very first render.
+
   useEffect(() => { refreshCitations(); }, [barangays]);
 
-  // Keep the dashboard live when the enforcer app syncs a new citation from
-  // the field: that insert happens directly against Supabase from the
-  // Flutter app, outside of any request this browser tab makes, so without
-  // a subscription the admin would only see it after manually reloading the
-  // page (same reasoning as the payment-changes subscription below).
+ 
   useEffect(() => {
     const channel = supabase
       .channel("citation-changes")
@@ -349,7 +333,7 @@ export function TrafficDataProvider({ children }) {
         status: data.status || "Pending",
         motorist_full_name: motoristName,
         fine_amount: ordinance.fine,
-        qr_code_data: `https://eticket.libmananpso.gov.ph/t/${ticketNumber}`,
+        qr_code_data: `https://lpso-motorist-portal.vercel.app/t/${ticketNumber}`,
         is_synced: true,
       });
       if (citationErr) throw citationErr;
@@ -656,14 +640,7 @@ export function TrafficDataProvider({ children }) {
 
   useEffect(() => { refreshPayments(); }, []);
 
-  // Keep the admin dashboard's payment list live: PayMongo's webhook updates
-  // the "payment" (and "citation") rows server-side, outside of any request
-  // this browser tab makes, so without a subscription an admin would only
-  // ever see a new status after manually reloading the page. Supabase
-  // Realtime pushes a notification the moment the webhook (or a manual
-  // verification / refresh) writes to the table, and we simply re-fetch the
-  // joined payment list at that point rather than trying to patch the
-  // change in by hand.
+  //keep the payment live 
   useEffect(() => {
     const channel = supabase
       .channel("payment-changes")
@@ -676,10 +653,7 @@ export function TrafficDataProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Server-side status check against PayMongo (via the admin-check-payment-status
-  // edge function, which holds the PayMongo secret key). This is the only way a
-  // QR Ph payment's status is confirmed from the admin panel - never from a
-  // frontend claim, screenshot, or QR scan.
+  
   const refreshPaymentStatus = async (id) => {
     const current = payments.find(p => p.id === id);
     if (!current) return { ok: false, error: "Payment not found." };
@@ -699,11 +673,6 @@ export function TrafficDataProvider({ children }) {
     return { ok: true, status: data.status, paymongoStatus: data.paymongo_status };
   };
 
-  // Bulk version of refreshPaymentStatus for the "Refresh Payment Status"
-  // button in the Payment Verification header - checks every still-pending
-  // QR Ph payment against PayMongo directly (one at a time, so we don't
-  // burst PayMongo's API), then refreshes the list once at the end. Still
-  // server-side only: nothing here trusts a frontend claim.
   const refreshAllPendingPayments = async () => {
     const pending = payments.filter(p => p.source === "qrph" && p.status === "pending");
     let updatedCount = 0;
@@ -724,13 +693,7 @@ export function TrafficDataProvider({ children }) {
     return { ok: true, checked: pending.length, updated: updatedCount, errors: errorCount };
   };
 
-  // Manual "Mark as Paid (Office Payment)" - for when a motorist walks into
-  // the LPSO office and pays in person (e.g. cash) instead of through QR Ph.
-  // This is a direct admin action, not a motorist claim: the admin doing it
-  // is personally verifying the payment right there, so it's recorded with
-  // who did it and when for the audit trail, mirroring exactly what the
-  // PayMongo webhook does automatically for a QR Ph payment (payment ->
-  // "paid", citation -> "Settled"), guarded by the same idempotency check.
+  // Manual "Mark as Paid (Office Payment)" - 
   const markPaymentPaidManually = async (id, { verifiedBy, notes } = {}) => {
     const current = payments.find(p => p.id === id);
     if (!current) return { ok: false, error: "Payment not found." };
