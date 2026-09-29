@@ -423,9 +423,7 @@ export function TrafficDataProvider({ children }) {
 
     const enforcerId = `ENF-${Date.now().toString(36).toUpperCase()}`;
 
-    // password is hashed with bcrypt server-side (see the create_enforcer Postgres
-    // function) - the plaintext only ever travels over HTTPS to Supabase, it's never
-    // hashed or stored in the browser, so there's no client-side hashing step here.
+
     const { data: rows, error } = await supabase.rpc("create_enforcer", {
       p_enforcer_id: enforcerId,
       p_registration_id: "",
