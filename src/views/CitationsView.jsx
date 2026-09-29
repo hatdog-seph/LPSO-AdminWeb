@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Search, Plus, Pencil, Trash2, X } from "lucide-react";
+import { Search, Pencil, Trash2, X } from "lucide-react";
 import { C, cellStyle } from "../theme.js";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusPill from "../components/StatusPill.jsx";
@@ -26,7 +26,7 @@ const inputStyle = {
 };
 
 export default function CitationsView() {
-  const { citations, ordinances = [], enforcers = [], barangays = [], addCitation, updateCitation, deleteCitation } = useTrafficData();
+  const { citations, ordinances = [], enforcers = [], barangays = [], updateCitation, deleteCitation } = useTrafficData();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("All");
   const [zone, setZone] = useState("All");
@@ -42,11 +42,8 @@ export default function CitationsView() {
       && (zone === "All" || c.zone === zone);
   }), [citations, q, status, zone]);
 
-  const openCreate = () => {
-    setEditing({ ...emptyForm, ordinanceId: ordinances[0]?.id || "", violation: ordinances[0]?.desc || "", enforcerId: enforcers[0]?.id || "", barangayId: barangays[0]?.id || "" });
-    setShowForm(true);
-  };
-
+  // Citations can only be created in the field by an enforcer via the mobile app - the
+  // admin console is view/edit/delete only (openCreate was removed on purpose).
   const openEdit = (citation) => {
     setEditing({
       ...citation,
@@ -61,18 +58,13 @@ export default function CitationsView() {
     e.preventDefault();
     if (!editing?.motorist?.trim() || !editing?.plateNumber?.trim()) return;
 
-    if (editing.id) {
-      updateCitation(editing.id, {
-        motorist: editing.motorist,
-        plateNumber: editing.plateNumber,
-        ordinanceId: editing.ordinanceId,
-        enforcerId: editing.enforcerId,
-        status: editing.status,
-      });
-    } else {
-      const barangay = barangays.find(b => b.id === editing.barangayId) || barangays[0];
-      addCitation({ ...editing, position: [barangay.lat, barangay.lng] });
-    }
+    updateCitation(editing.id, {
+      motorist: editing.motorist,
+      plateNumber: editing.plateNumber,
+      ordinanceId: editing.ordinanceId,
+      enforcerId: editing.enforcerId,
+      status: editing.status,
+    });
     setShowForm(false);
     setEditing(null);
   };
@@ -98,12 +90,8 @@ export default function CitationsView() {
             placeholder="Search citation, motorist, plate, or violation"
             style={{ ...inputStyle, paddingLeft: 30 }} />
         </div>
-        <Select value={status} onChange={setStatus} options={["All", "Paid", "Pending", "Overdue", "Contested"]} />
+        <Select value={status} onChange={setStatus} options={["All", "Settled", "Pending", "Overdue", "Contested"]} />
         <Select value={zone} onChange={setZone} options={zoneOptions} />
-        <button className="et-btn" onClick={openCreate}
-          style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 13px", borderRadius: 8, border: "none", background: C.accent, color: "#fff", fontWeight: 700 }}>
-          <Plus size={15} /> Add Citation
-        </button>
       </div>
 
       <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
@@ -142,7 +130,7 @@ export default function CitationsView() {
           onMouseDown={e => { if (e.target === e.currentTarget) { setShowForm(false); setEditing(null); } }}>
           <form onSubmit={save} style={{ width: "min(620px, 100%)", maxHeight: "90vh", overflowY: "auto", background: C.surface, borderRadius: 14, boxShadow: "0 18px 50px rgba(0,0,0,.2)" }}>
             <div style={{ padding: "16px 18px", borderBottom: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div><div style={{ fontSize: 16, fontWeight: 700 }}>{editing.id ? "Edit Citation" : "Add Citation"}</div><div style={{ fontSize: 11, color: C.inkFaint }}>{editing.id || "New traffic citation"}</div></div>
+              <div><div style={{ fontSize: 16, fontWeight: 700 }}>Edit Citation</div><div style={{ fontSize: 11, color: C.inkFaint }}>{editing.id}</div></div>
               <button type="button" className="et-btn" onClick={() => { setShowForm(false); setEditing(null); }} style={{ padding: 6, background: "transparent", color: C.inkSoft }}><X size={18} /></button>
             </div>
             <div style={{ padding: 18, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -150,13 +138,12 @@ export default function CitationsView() {
               <Field label="Plate number"><input required value={editing.plateNumber} onChange={e => setEditing(x => ({ ...x, plateNumber: e.target.value }))} style={inputStyle} /></Field>
               <Field label="Ordinance / Violation"><select value={editing.ordinanceId} onChange={e => { const o = ordinances.find(x => x.id === e.target.value); setEditing(x => ({ ...x, ordinanceId: e.target.value, violation: o?.desc || x.violation })); }} style={inputStyle}>{ordinances.map(o => <option key={o.id} value={o.id}>{o.code} — {o.desc} (₱{Number(o.fine).toLocaleString("en-PH")})</option>)}</select></Field>
               <Field label="Enforcer"><select value={editing.enforcerId} onChange={e => setEditing(x => ({ ...x, enforcerId: e.target.value }))} style={inputStyle}>{enforcers.length ? enforcers.map(o => <option key={o.id} value={o.id}>{o.name} (Badge {o.badge})</option>) : <option value="">No enforcers registered yet</option>}</select></Field>
-              {!editing.id && <Field label="Barangay"><select value={editing.barangayId} onChange={e => setEditing(x => ({ ...x, barangayId: e.target.value }))} style={inputStyle}>{barangays.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></Field>}
-              <Field label="Status"><select value={editing.status} onChange={e => setEditing(x => ({ ...x, status: e.target.value }))} style={inputStyle}>{["Paid", "Pending", "Overdue", "Contested"].map(v => <option key={v}>{v}</option>)}</select></Field>
-              {editing.id && <Field label="Issued"><input disabled value={`${editing.date || "—"} ${editing.time || ""}`} style={{ ...inputStyle, color: C.inkFaint, background: C.surfaceSunk }} /></Field>}
+              <Field label="Status"><select value={editing.status} onChange={e => setEditing(x => ({ ...x, status: e.target.value }))} style={inputStyle}>{["Settled", "Pending", "Overdue", "Contested"].map(v => <option key={v}>{v}</option>)}</select></Field>
+              <Field label="Issued"><input disabled value={`${editing.date || "—"} ${editing.time || ""}`} style={{ ...inputStyle, color: C.inkFaint, background: C.surfaceSunk }} /></Field>
             </div>
             <div style={{ padding: "0 18px 18px", display: "flex", justifyContent: "flex-end", gap: 8 }}>
               <button type="button" className="et-btn" onClick={() => { setShowForm(false); setEditing(null); }} style={{ padding: "9px 14px", borderRadius: 8, background: C.surface, border: `1px solid ${C.line}`, color: C.inkSoft }}>Cancel</button>
-              <button type="submit" className="et-btn" style={{ padding: "9px 15px", borderRadius: 8, border: "none", background: C.accent, color: "#fff", fontWeight: 700 }}>{editing.id ? "Save Changes" : "Create Citation"}</button>
+              <button type="submit" className="et-btn" style={{ padding: "9px 15px", borderRadius: 8, border: "none", background: C.accent, color: "#fff", fontWeight: 700 }}>Save Changes</button>
             </div>
           </form>
         </div>
