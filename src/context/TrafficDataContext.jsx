@@ -258,6 +258,23 @@ export function TrafficDataProvider({ children }) {
   // of being stuck with the empty list from the very first render.
   useEffect(() => { refreshCitations(); }, [barangays]);
 
+  // Keep the dashboard live when the enforcer app syncs a new citation from
+  // the field: that insert happens directly against Supabase from the
+  // Flutter app, outside of any request this browser tab makes, so without
+  // a subscription the admin would only see it after manually reloading the
+  // page (same reasoning as the payment-changes subscription below).
+  useEffect(() => {
+    const channel = supabase
+      .channel("citation-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "citation" }, () => {
+        refreshCitations();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const addCitation = async (data) => {
     if (!isInsideLibmanan(data?.position)) {
       window.alert("Citation location is outside the Municipality of Libmanan.");
