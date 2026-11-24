@@ -1,3 +1,4 @@
+// FILE PATH: AdminWeb/src/context/TrafficDataContext.jsx  (REPLACE the existing file)
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { isInsideLibmanan } from "../data/libmananGeofence.js";
 import { supabase } from "../lib/supabaseClient.js";
@@ -129,7 +130,7 @@ const CITATION_SELECT = `
   citation_id, ticket_number, enforcer_id, motorist_id, vehicle_id,
   ordinance_id, location_id, issued_at, status, motorist_full_name,
   fine_amount, qr_code_data, is_synced,
-  motorist:motorist_id ( license_number ),
+  motorist:motorist_id ( license_number, contact_number ),
   vehicle:vehicle_id ( plate_number, vehicle_type ),
   ordinance:ordinance_id ( ordinance_id, ordinance_code, violation_description, fine_amount ),
   citation_location:location_id ( latitude, longitude, barangay ),
@@ -163,6 +164,7 @@ function fromCitationRow(row, barangays) {
     vehicleId: row.vehicle_id,
     motoristId: row.motorist_id,
     license: row.motorist ? (row.motorist.license_number || "No License") : null,
+    phone: row.motorist?.contact_number || null,
     ordinanceId: row.ordinance_id,
     ordinance,
     violation: primaryViolation?.violation_description || ordinance?.desc || "—",

@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from "react";
-import { Search, Pencil, Trash2, X } from "lucide-react";
+import { Search, Pencil, Trash2, X, MessageSquare } from "lucide-react";
 import { C, cellStyle } from "../theme.js";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusPill from "../components/StatusPill.jsx";
 import Select from "../components/Select.jsx";
+import SmsReminderDialog from "../components/SmsReminderDialog.jsx";
+import BulkSmsDialog from "../components/BulkSmsDialog.jsx";
 import { useTrafficData } from "../context/TrafficDataContext.jsx";
 
 const emptyForm = {
@@ -25,6 +27,11 @@ const inputStyle = {
   borderRadius: 8, fontSize: 12, background: C.surface, color: C.ink,
 };
 
+
+// SMS reminders only make sense for unpaid citations whose motorist has a phone number on file.
+const canSms = (c) => !!c.phone && (c.status === "Pending" || c.status === "Overdue");
+const smsTitle = (c) => !c.phone ? "No phone number on file" : canSms(c) ? "Send SMS reminder" : `Citation is ${c.status}`;
+
 export default function CitationsView() {
   const { citations, ordinances = [], enforcers = [], barangays = [], updateCitation, deleteCitation } = useTrafficData();
   const [q, setQ] = useState("");
@@ -32,6 +39,10 @@ export default function CitationsView() {
   const [zone, setZone] = useState("All");
   const [editing, setEditing] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [smsTarget, setSmsTarget] = useState(null);
+  const [showBulkSms, setShowBulkSms] = useState(false);
+
+  const pendingCount = useMemo(() => citations.filter(c => c.status === "Pending").length, [citations]);
 
   const zoneOptions = useMemo(() => ["All", ...Array.from(new Set(citations.map(c => c.zone).filter(Boolean))).sort()], [citations]);
 
@@ -81,7 +92,15 @@ export default function CitationsView() {
 
   return (
     <div className="et-fade-in">
-      <PageHeader title="Citation monitoring" subtitle={`${filtered.length} of ${citations.length} records`} live />
+      <PageHeader title="Citation monitoring" subtitle={`${filtered.length} of ${citations.length} records`} live
+        actions={
+          <button className="et-btn" disabled={!pendingCount} onClick={() => setShowBulkSms(true)}
+            title={pendingCount ? "Send an SMS reminder to every pending citation" : "No pending citations"}
+            style={{ padding: "8px 13px", borderRadius: 8, border: "none", background: C.accent, color: "#fff", fontWeight: 700, fontSize: 13, display: "inline-flex", alignItems: "center", gap: 7, opacity: pendingCount ? 1 : 0.4 }}>
+            <MessageSquare size={14} /> Send SMS
+            <span style={{ background: "#fff", color: C.accent, borderRadius: 10, fontSize: 11, padding: "1px 7px" }}>{pendingCount}</span>
+          </button>
+        } />
 
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ position: "relative", flex: "1 1 260px" }}>
@@ -112,6 +131,8 @@ export default function CitationsView() {
                   <td style={cellStyle}>{c.date}</td>
                   <td style={cellStyle}><StatusPill status={c.status} /></td>
                   <td style={{ ...cellStyle, whiteSpace: "nowrap" }}>
+                    <button className="et-btn" title={smsTitle(c)} disabled={!canSms(c)} onClick={() => setSmsTarget(c)}
+                      style={{ padding: 6, borderRadius: 6, background: C.successSoft, color: C.successDark, marginRight: 5, opacity: canSms(c) ? 1 : 0.35, cursor: canSms(c) ? "pointer" : "not-allowed" }}><MessageSquare size={14} /></button>
                     <button className="et-btn" title="Edit citation" onClick={() => openEdit(c)}
                       style={{ padding: 6, borderRadius: 6, background: C.infoSoft, color: C.infoDark, marginRight: 5 }}><Pencil size={14} /></button>
                     <button className="et-btn" title="Delete citation" onClick={() => remove(c)}
@@ -148,6 +169,8 @@ export default function CitationsView() {
           </form>
         </div>
       )}
+      {showBulkSms && <BulkSmsDialog citations={citations} onClose={() => setShowBulkSms(false)} />}
+      {smsTarget && <SmsReminderDialog citation={smsTarget} onClose={() => setSmsTarget(null)} />}
     </div>
   );
 }
