@@ -17,7 +17,7 @@ const fmtDate = (iso) =>
 // "PHP" is used instead of the peso sign because non-GSM characters force a 70-character SMS segment.
 export function buildPreview({ ticket, violation, amount, deadline, portalUrl }) {
   return `LPSO Libmanan: Pending citation ${ticket} for ${violation}. Fine: PHP ${Number(amount || 0).toLocaleString("en-PH")}. ` +
-    `Please settle by ${fmtDate(deadline)}. Pay online: ${portalUrl}`;
+    `Please settle by ${fmtDate(deadline)} at the LPSO office.`; // no link: carriers block SMS with URLs
 }
 
 const segments = (len) => (len <= 160 ? 1 : Math.ceil(len / 153));

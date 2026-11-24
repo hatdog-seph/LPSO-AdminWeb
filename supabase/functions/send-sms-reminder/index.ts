@@ -17,7 +17,7 @@ const RATE_LIMIT_HOURS = 24;
 function buildMessage(c: { ticket: string; violation: string; amount: number; deadline: string; portalUrl: string }) {
   const date = new Date(`${c.deadline}T00:00:00`).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" });
   return `LPSO Libmanan: Pending citation ${c.ticket} for ${c.violation}. Fine: PHP ${Number(c.amount).toLocaleString("en-PH")}. ` +
-    `Please settle by ${date}. Pay online: ${c.portalUrl}`;
+    `Please settle by ${date} at the LPSO office.`; // no link: carriers block SMS with URLs
 }
 
 // 09171234567 / +639171234567 / 639171234567 -> 09171234567

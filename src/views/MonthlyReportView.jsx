@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { X, Printer } from "lucide-react";
+import { X, Printer, Download, ChevronDown } from "lucide-react";
 import { C } from "../theme.js";
 import { peso } from "../data/geoData.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { computeAnalytics } from "../utils/analytics.js";
+import { buildReportModel, exportReport, EXPORT_FORMATS } from "../utils/reportExport.js";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -61,6 +62,24 @@ export default function MonthlyReportView({ citations, ordinances, payments, onC
   const generatedAt = new Date();
   const generatedBy = user?.name || "LPSO Administrator";
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [exporting, setExporting] = useState(null);
+  const [exportError, setExportError] = useState("");
+
+  const runExport = async (format) => {
+    setMenuOpen(false);
+    setExportError("");
+    setExporting(format);
+    try {
+      await exportReport(format, buildReportModel({ month, year, stats, paymentStats, generatedBy, generatedAt: new Date() }));
+    } catch (e) {
+      console.error(e);
+      setExportError("Could not create the file. Please try again.");
+    } finally {
+      setExporting(null);
+    }
+  };
+
   return (
     <div className="report-overlay" style={{ position: "fixed", inset: 0, zIndex: 90, background: C.bg, overflowY: "auto" }}>
       <div className="no-print" style={{
@@ -76,7 +95,22 @@ export default function MonthlyReportView({ citations, ordinances, payments, onC
             {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", position: "relative" }}>
+          {exportError && <span style={{ fontSize: 12, color: C.danger }}>{exportError}</span>}
+          <button className="et-btn" onClick={() => setMenuOpen(o => !o)} disabled={!!exporting}
+            style={{ padding: "9px 14px", borderRadius: 8, border: `1px solid ${C.accent}`, background: C.surface, color: C.accent, fontWeight: 700, fontSize: 12.5, display: "flex", alignItems: "center", gap: 7, opacity: exporting ? 0.6 : 1 }}>
+            <Download size={14} /> {exporting ? "Preparing…" : "Download as"} <ChevronDown size={14} />
+          </button>
+          {menuOpen && (
+            <div style={{ position: "absolute", top: 42, right: 0, zIndex: 5, minWidth: 190, background: C.surface, border: `1px solid ${C.line}`, borderRadius: 8, boxShadow: "0 6px 18px rgba(0,0,0,.12)", overflow: "hidden" }}>
+              {EXPORT_FORMATS.map(f => (
+                <button key={f.id} onClick={() => runExport(f.id)}
+                  style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", border: 0, borderBottom: `1px solid ${C.line}`, background: C.surface, color: C.ink, fontSize: 12.5, cursor: "pointer" }}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
           <button className="et-btn" onClick={() => window.print()}
             style={{ padding: "9px 14px", borderRadius: 8, border: "none", background: C.accent, color: "#fff", fontWeight: 700, fontSize: 12.5, display: "flex", alignItems: "center", gap: 7 }}>
             <Printer size={14} /> Print Monthly Report
