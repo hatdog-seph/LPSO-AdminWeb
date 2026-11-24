@@ -232,9 +232,16 @@ function SingleCitationMarker({ c }) {
 function ResizeWatcher({ expanded }) {
   const map = useMap();
   useEffect(() => {
-    const t = setTimeout(() => map.invalidateSize(), 60);
-    return () => clearTimeout(t);
+    const timers = [60, 250, 600].map(ms => setTimeout(() => map.invalidateSize(), ms));
+    return () => timers.forEach(clearTimeout);
   }, [expanded, map]);
+  // Also follow any size change of the map box itself (window resize, etc.)
+  useEffect(() => {
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(() => map.invalidateSize());
+    ro.observe(map.getContainer());
+    return () => ro.disconnect();
+  }, [map]);
   return null;
 }
 
@@ -276,7 +283,13 @@ export default function HotspotMap({ compact = false, highlight, onSelect, stats
 
   return (
     <div style={expanded
-      ? { position: "fixed", inset: 0, zIndex: 2000, background: C.surfaceSunk, overflow: "hidden" }
+      ? {
+          // Explicit size = exactly the browser window, even though the console
+          // is scaled up with CSS zoom (the page is divided by the zoom so the
+          // zoomed result lands on the full window).
+          position: "fixed", top: 0, left: 0, zIndex: 2000, background: C.surfaceSunk, overflow: "hidden",
+          width: "calc(100vw / var(--ui-zoom, 1))", height: "calc(100dvh / var(--ui-zoom, 1))",
+        }
       : { position: "relative", borderRadius: 10, overflow: "hidden", border: `1px solid ${C.line}` }}>
       <MapContainer
         center={LIBMANAN_CENTER}
