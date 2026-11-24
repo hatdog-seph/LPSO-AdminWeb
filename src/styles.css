@@ -438,3 +438,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .et-main select, .et-main input[type="date"] { width: 100% !important; }
   .et-main h1.et-display { font-size: 22px !important; }
 }
+
+/* full-screen map: hide the chrome around it */
+body.et-map-full .et-sidebar, body.et-map-full .et-topbar { visibility: hidden; }

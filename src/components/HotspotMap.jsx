@@ -229,8 +229,12 @@ function SingleCitationMarker({ c }) {
 }
 
 // Re-measures the map after it is widened / shrunk so tiles fill the new box.
-function ResizeWatcher({ expanded }) {
+function ResizeWatcher({ expanded, wheelZoom }) {
   const map = useMap();
+  // react-leaflet reads map options only once, so wheel zoom is switched here
+  useEffect(() => {
+    if (wheelZoom || expanded) map.scrollWheelZoom.enable(); else map.scrollWheelZoom.disable();
+  }, [expanded, wheelZoom, map]);
   useEffect(() => {
     const timers = [60, 250, 600].map(ms => setTimeout(() => map.invalidateSize(), ms));
     return () => timers.forEach(clearTimeout);
@@ -258,7 +262,12 @@ export default function HotspotMap({ compact = false, highlight, onSelect, stats
     if (!expanded) return;
     const onKey = (e) => { if (e.key === "Escape") setExpanded(false); };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // hide the sidebar and top bar so nothing overlaps the full-screen map
+    document.body.classList.add("et-map-full");
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.classList.remove("et-map-full");
+    };
   }, [expanded]);
 
   // Every citation belongs to its nearest barangay (same rule the ranking
@@ -291,18 +300,20 @@ export default function HotspotMap({ compact = false, highlight, onSelect, stats
           width: "calc(100vw / var(--ui-zoom, 1))", height: "calc(100dvh / var(--ui-zoom, 1))",
         }
       : { position: "relative", borderRadius: 10, overflow: "hidden", border: `1px solid ${C.line}` }}>
+      {/* MapContainer only reads its style once, so the changing height lives on this wrapper */}
+      <div style={{ height: expanded ? "100%" : height, width: "100%" }}>
       <MapContainer
         center={LIBMANAN_CENTER}
         zoom={compact ? 12 : 13}
-        style={{ height: expanded ? "100%" : height, width: "100%", background: C.surfaceSunk }}
-        scrollWheelZoom={!compact || expanded}
+        style={{ height: "100%", width: "100%", background: C.surfaceSunk }}
+        scrollWheelZoom={!compact}
       >
         <TileLayer
           attribution='&copy; OpenStreetMap contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <FocusController highlight={highlight} stats={safeStats} />
-        <ResizeWatcher expanded={expanded} />
+        <ResizeWatcher expanded={expanded} wheelZoom={!compact} />
 
         {safeStats.map((b) => {
           const r = radiusFor(b.count, max);
@@ -361,6 +372,7 @@ export default function HotspotMap({ compact = false, highlight, onSelect, stats
             : <StackMarker key={g.key} group={g} />
         )}
       </MapContainer>
+      </div>
 
       <button
         type="button"
