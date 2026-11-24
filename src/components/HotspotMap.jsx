@@ -45,12 +45,12 @@ function countIcon(n) {
   return L.divIcon({
     className: "",
     html:
-      `<div style="width:30px;height:30px;border-radius:50%;background:${C.citationMarker};` +
-      `border:3px solid #fff;box-shadow:0 0 0 5px rgba(242,183,5,.28),0 1px 4px rgba(0,0,0,.3);` +
-      `display:flex;align-items:center;justify-content:center;font:700 13px Inter,sans-serif;color:${C.ink}">${n}</div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    popupAnchor: [0, -16],
+      `<div style="width:22px;height:22px;border-radius:50%;background:${C.citationMarker};` +
+      `border:2px solid #fff;box-shadow:0 0 0 3px rgba(242,183,5,.28),0 1px 3px rgba(0,0,0,.3);` +
+      `display:flex;align-items:center;justify-content:center;font:700 11px Inter,sans-serif;color:${C.ink}">${n}</div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -12],
   });
 }
 
@@ -81,29 +81,57 @@ function StatusChip({ status }) {
 }
 
 // Popup for a spot with several citations: a numbered list first, then the
-// details of ONLY the one that was clicked.
+// details of ONLY the one that was clicked. Both views stay mounted and are
+// toggled with display, so the clicked button is never removed from the page
+// in the middle of its own click (Leaflet treats that as a click on the map
+// and closes the popup).
 function StackedPopup({ items }) {
   const [sel, setSel] = useState(null);
   const font = { fontFamily: "Inter, sans-serif" };
   const location = items[0].location || items[0].barangay?.name || "Libmanan";
+  const c = items[sel ?? 0];
+  const violations = c.violations?.length ? c.violations.map(v => v.desc).filter(Boolean) : [c.violation || "—"];
+  const stop = (e) => e.stopPropagation();
 
-  if (sel !== null) {
-    const c = items[sel];
-    const violations = c.violations?.length ? c.violations.map(v => v.desc).filter(Boolean) : [c.violation || "—"];
-    return (
-      <div style={{ ...font, width: 250 }}>
+  return (
+    <div style={{ ...font, width: 250 }} onClick={stop} onMouseDown={stop}>
+      {/* LIST */}
+      <div style={{ display: sel === null ? "block" : "none" }}>
+        <div style={{ padding: "2px 10px 8px" }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.ink }}>{items.length} citations at this spot</div>
+          <div style={{ fontSize: 12, color: C.inkSoft, marginTop: 2 }}>{location} · click a name for details</div>
+        </div>
+        <div style={{ maxHeight: 240, overflowY: "auto", borderTop: `1px solid ${C.line}` }}>
+          {items.map((it, i) => (
+            <button key={it.id} type="button" onClick={() => setSel(i)}
+              onMouseEnter={(e) => { e.currentTarget.style.background = C.accentSoft; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}
+              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", boxSizing: "border-box", padding: "9px 10px", border: 0, borderBottom: `1px solid ${C.line}`, background: "#fff", textAlign: "left", cursor: "pointer" }}>
+              <span style={{ flex: "none", width: 22, height: 22, borderRadius: "50%", background: C.sidebar, color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+              <span style={{ flexGrow: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: C.ink }}>{it.motorist || "Unknown Motorist"}</span>
+                <span style={{ display: "block", fontSize: 11.5, color: C.inkSoft }}>{it.plateNumber || "No plate"} · {peso(it.amount ?? it.fine)}</span>
+              </span>
+              <StatusChip status={it.status} />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* DETAILS of the clicked citation */}
+      <div style={{ display: sel === null ? "none" : "block" }}>
         <button type="button" onClick={() => setSel(null)}
           style={{ display: "block", width: "100%", textAlign: "left", border: 0, borderBottom: `1px solid ${C.line}`, background: C.bg, color: C.accentDark, fontSize: 12, fontWeight: 600, padding: "8px 10px", cursor: "pointer", borderRadius: "6px 6px 0 0" }}>
           ‹ All {items.length} citations
         </button>
         <div style={{ padding: "10px 10px 4px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ flex: "none", width: 22, height: 22, borderRadius: "50%", background: C.sidebar, color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{sel + 1}</span>
+            <span style={{ flex: "none", width: 22, height: 22, borderRadius: "50%", background: C.sidebar, color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{(sel ?? 0) + 1}</span>
             <span style={{ flexGrow: 1, fontSize: 14, fontWeight: 700, color: C.ink }}>{c.motorist || "Unknown Motorist"}</span>
             <StatusChip status={c.status} />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "76px 1fr", rowGap: 6, marginTop: 10, fontSize: 12.5, lineHeight: 1.4, color: C.ink }}>
-            <div style={{ color: C.inkSoft }}>Ticket</div><div style={{ fontWeight: 600 }}>{c.ticket || "—"}</div>
+            <div style={{ color: C.inkSoft }}>Ticket</div><div style={{ fontWeight: 600, wordBreak: "break-all" }}>{c.ticket || "—"}</div>
             <div style={{ color: C.inkSoft }}>Plate</div><div>{c.plateNumber || "—"}</div>
             <div style={{ color: C.inkSoft }}>Violation</div>
             <div>{violations.map((v, i) => <div key={i}>{v}</div>)}</div>
@@ -112,30 +140,6 @@ function StackedPopup({ items }) {
             <div style={{ color: C.inkSoft }}>Location</div><div>{c.location || location}</div>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ ...font, width: 250 }}>
-      <div style={{ padding: "2px 10px 8px" }}>
-        <div style={{ fontWeight: 700, fontSize: 14, color: C.ink }}>{items.length} citations at this spot</div>
-        <div style={{ fontSize: 12, color: C.inkSoft, marginTop: 2 }}>{location} · click a name for details</div>
-      </div>
-      <div style={{ maxHeight: 240, overflowY: "auto", borderTop: `1px solid ${C.line}` }}>
-        {items.map((c, i) => (
-          <button key={c.id} type="button" onClick={() => setSel(i)}
-            onMouseEnter={(e) => { e.currentTarget.style.background = C.accentSoft; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}
-            style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", boxSizing: "border-box", padding: "9px 10px", border: 0, borderBottom: `1px solid ${C.line}`, background: "#fff", textAlign: "left", cursor: "pointer" }}>
-            <span style={{ flex: "none", width: 22, height: 22, borderRadius: "50%", background: C.sidebar, color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
-            <span style={{ flexGrow: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: C.ink }}>{c.motorist || "Unknown Motorist"}</span>
-              <span style={{ display: "block", fontSize: 11.5, color: C.inkSoft }}>{c.plateNumber || "No plate"} · {peso(c.amount ?? c.fine)}</span>
-            </span>
-            <StatusChip status={c.status} />
-          </button>
-        ))}
       </div>
     </div>
   );
@@ -151,7 +155,7 @@ function StackMarker({ group }) {
       icon={countIcon(group.items.length)}
       zIndexOffset={1000}
       eventHandlers={{
-        mouseover: (e) => e.target.openPopup(),
+        mouseover: (e) => { if (!e.target.isPopupOpen()) e.target.openPopup(); },
         popupclose: () => setResetKey(k => k + 1),
       }}
     >
