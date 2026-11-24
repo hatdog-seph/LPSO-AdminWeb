@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import L from "leaflet";
 import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, Popup, useMap } from "react-leaflet";
+import { ChevronsLeftRight, ChevronsRightLeft } from "lucide-react";
 import { C } from "../theme.js";
 import { supabase } from "../lib/supabaseClient.js";
 
@@ -227,12 +228,31 @@ function SingleCitationMarker({ c }) {
   );
 }
 
+// Re-measures the map after it is widened / shrunk so tiles fill the new box.
+function ResizeWatcher({ expanded }) {
+  const map = useMap();
+  useEffect(() => {
+    const t = setTimeout(() => map.invalidateSize(), 60);
+    return () => clearTimeout(t);
+  }, [expanded, map]);
+  return null;
+}
+
 export default function HotspotMap({ compact = false, highlight, onSelect, stats = [], citations = [] }) {
   const safeStats = stats.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng));
   const max = Math.max(...safeStats.map(s => s.count), 1);
   const height = compact ? 300 : "clamp(380px, calc(100dvh / var(--ui-zoom, 1) - 330px), 900px)";
   const topId = safeStats[0]?.id;
   const groups = groupCitations(citations);
+
+  // "<>" button at the bottom of the map: widen it over the whole screen.
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e) => { if (e.key === "Escape") setExpanded(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expanded]);
 
   // Every citation belongs to its nearest barangay (same rule the ranking
   // uses, ignoring anything farther than 15 km), newest first.
@@ -255,18 +275,21 @@ export default function HotspotMap({ compact = false, highlight, onSelect, stats
     });
 
   return (
-    <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${C.line}` }}>
+    <div style={expanded
+      ? { position: "fixed", inset: 0, zIndex: 2000, background: C.surfaceSunk, overflow: "hidden" }
+      : { position: "relative", borderRadius: 10, overflow: "hidden", border: `1px solid ${C.line}` }}>
       <MapContainer
         center={LIBMANAN_CENTER}
         zoom={compact ? 12 : 13}
-        style={{ height, width: "100%", background: C.surfaceSunk }}
-        scrollWheelZoom={!compact}
+        style={{ height: expanded ? "100%" : height, width: "100%", background: C.surfaceSunk }}
+        scrollWheelZoom={!compact || expanded}
       >
         <TileLayer
           attribution='&copy; OpenStreetMap contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <FocusController highlight={highlight} stats={safeStats} />
+        <ResizeWatcher expanded={expanded} />
 
         {safeStats.map((b) => {
           const r = radiusFor(b.count, max);
@@ -325,6 +348,22 @@ export default function HotspotMap({ compact = false, highlight, onSelect, stats
             : <StackMarker key={g.key} group={g} />
         )}
       </MapContainer>
+
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        title={expanded ? "Exit full screen (Esc)" : "Widen map to full screen"}
+        aria-label={expanded ? "Exit full screen map" : "Widen map to full screen"}
+        style={{
+          position: "absolute", left: "50%", bottom: 14, transform: "translateX(-50%)", zIndex: 1100,
+          display: "flex", alignItems: "center", gap: 7, padding: "8px 14px",
+          background: "rgba(255,255,255,.96)", color: C.ink, border: `1px solid ${C.line}`, borderRadius: 999,
+          boxShadow: "0 2px 10px rgba(15,23,42,.18)", cursor: "pointer", font: "600 12px Inter, sans-serif",
+        }}
+      >
+        {expanded ? <ChevronsRightLeft size={16} /> : <ChevronsLeftRight size={16} />}
+        {expanded ? "Exit full screen" : "Widen map"}
+      </button>
     </div>
   );
 }
