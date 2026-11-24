@@ -70,6 +70,15 @@ const peso = (n) => `₱${Number(n || 0).toLocaleString("en-PH")}`;
 
 // Vehicle photo from the private citation-photos bucket. A short-lived signed
 // link is requested only when the photo is actually on screen.
+// time of day read straight from the stored text (the enforcer app saves local
+// time, so converting time zones in the browser would shift it)
+function issuedTime(c) {
+  const m = /[T ](\d{2}):(\d{2})/.exec(String(c.issuedAt || ""));
+  if (!m) return "";
+  const h = Number(m[1]);
+  return `${h % 12 === 0 ? 12 : h % 12}:${m[2]} ${h >= 12 ? "PM" : "AM"}`;
+}
+
 function VehiclePhoto({ path, visible }) {
   const [url, setUrl] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -174,7 +183,7 @@ function StackedPopup({ items, heading }) {
             <div style={{ color: C.inkSoft }}>Violation</div>
             <div>{violations.map((v, i) => <div key={i}>{v}</div>)}</div>
             <div style={{ color: C.inkSoft }}>Fine</div><div style={{ fontWeight: 600 }}>{peso(c.amount ?? c.fine)}</div>
-            <div style={{ color: C.inkSoft }}>Issued</div><div>{c.date || "—"}</div>
+            <div style={{ color: C.inkSoft }}>Issued</div><div>{c.date || "—"}{issuedTime(c) ? `, ${issuedTime(c)}` : ""}</div>
             <div style={{ color: C.inkSoft }}>Location</div><div>{c.location || location}</div>
           </div>
           <VehiclePhoto key={c.id} path={c.photoPath} visible={sel !== null} />
