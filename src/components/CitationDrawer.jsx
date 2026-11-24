@@ -4,6 +4,9 @@ import { C } from "../theme.js";
 import { peso, fmtDate, fmtTime, statusColors } from "../data/geoData.js";
 import StatusPill from "./StatusPill.jsx";
 import SyncBadge from "./SyncBadge.jsx";
+import OffenseBadge from "./OffenseBadge.jsx";
+import { useTrafficData } from "../context/TrafficDataContext.jsx";
+import { computeOffenses } from "../utils/offenses.js";
 
 function Section({ title, children }) {
   return (
@@ -24,6 +27,8 @@ function Row({ k, v, mono, bold }) {
 }
 
 export default function CitationDrawer({ citation, onClose }) {
+  const { citations = [] } = useTrafficData();
+  const offenseLevel = React.useMemo(() => (citation ? computeOffenses(citations).get(citation.id)?.level : null), [citations, citation]);
   if (!citation) return null;
   const sc = statusColors(citation.status);
   return (
@@ -59,6 +64,7 @@ export default function CitationDrawer({ citation, onClose }) {
           <Row k="Ordinance" v={citation.ordinance?.code || "—"} mono />
           <Row k="Description" v={citation.ordinance?.desc || citation.violation || "—"} />
           <Row k="Category" v={citation.ordinance?.category || "Traffic"} />
+          <Row k="Offense" v={<OffenseBadge level={offenseLevel} quiet />} />
           <Row k="Fine" v={peso(citation.amount)} bold />
         </Section>
 

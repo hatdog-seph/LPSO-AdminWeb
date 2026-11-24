@@ -5,12 +5,17 @@ import PageHeader from "../components/PageHeader.jsx";
 import StatusPill from "../components/StatusPill.jsx";
 import TicketStat from "../components/TicketStat.jsx";
 import { useTrafficData } from "../context/TrafficDataContext.jsx";
+import OffenseBadge from "../components/OffenseBadge.jsx";
+import MotoristProfileDrawer from "../components/MotoristProfileDrawer.jsx";
+import { computeOffenses } from "../utils/offenses.js";
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString("en-PH")}`;
 
 export default function MotoristsView() {
   const { citations = [] } = useTrafficData();
   const [q, setQ] = useState("");
+  const [selected, setSelected] = useState(null);
+  const offenses = useMemo(() => computeOffenses(citations), [citations]);
 
   const rows = useMemo(() => [...citations].sort((a, b) => {
     const ad = new Date(a.issuedAt || a.date || 0).getTime();
@@ -54,7 +59,7 @@ export default function MotoristsView() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ background: C.surfaceSunk }}>
-                {["Motorist's Name", "Plate Number", "Violation", "Location of Citation", "Fee", "Status"].map(h => (
+                {["Motorist's Name", "Plate Number", "Violation", "Offense", "Location of Citation", "Fee", "Status"].map(h => (
                   <th key={h} style={{ textAlign: "left", fontSize: 10.5, color: C.inkFaint, fontWeight: 700, padding: "10px", textTransform: "uppercase" }}>{h}</th>
                 ))}
               </tr>
@@ -63,13 +68,14 @@ export default function MotoristsView() {
               {filtered.map(c => {
                 const location = c.location || c.barangay?.name || "Libmanan";
                 return (
-                  <tr key={c.id} className="et-row">
+                  <tr key={c.id} className="et-row" onClick={() => setSelected(c)} style={{ cursor: "pointer" }} title="Open motorist profile">
                     <td style={{ padding: 10, borderBottom: `1px solid ${C.line}`, fontWeight: 650 }}>
                       <div>{c.motorist || "Unknown Motorist"}</div>
                       <div style={{ fontSize: 10.5, color: C.inkFaint }} className="et-mono">{c.id}</div>
                     </td>
                     <td style={{ padding: 10, borderBottom: `1px solid ${C.line}` }}><span className="et-mono">{c.plateNumber || "—"}</span></td>
                     <td style={{ padding: 10, borderBottom: `1px solid ${C.line}` }}>{c.violation || "—"}</td>
+                    <td style={{ padding: 10, borderBottom: `1px solid ${C.line}` }}><OffenseBadge level={offenses.get(c.id)?.level} quiet /></td>
                     <td style={{ padding: 10, borderBottom: `1px solid ${C.line}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }}><MapPin size={13} color={C.accent} />{location}</div>
                       {Array.isArray(c.position) && <div style={{ fontSize: 10.5, color: C.inkFaint, marginTop: 2 }}>{Number(c.position[0]).toFixed(5)}, {Number(c.position[1]).toFixed(5)}</div>}
@@ -79,11 +85,18 @@ export default function MotoristsView() {
                   </tr>
                 );
               })}
-              {!filtered.length && <tr><td colSpan={6} style={{ padding: 30, textAlign: "center", color: C.inkFaint }}>No motorists match your search.</td></tr>}
+              {!filtered.length && <tr><td colSpan={7} style={{ padding: 30, textAlign: "center", color: C.inkFaint }}>No motorists match your search.</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
+
+      {selected && (
+        <>
+          <div onClick={() => setSelected(null)} style={{ position: "fixed", inset: 0, background: "rgba(10,20,15,0.15)", zIndex: 30 }} />
+          <MotoristProfileDrawer citation={selected} onClose={() => setSelected(null)} />
+        </>
+      )}
     </div>
   );
 }

@@ -19,16 +19,16 @@ export const DEFAULT_SETTINGS = {
 };
 
 export const SETTING_LABELS = {
-  hotspotSharePct: ["Hotspot share (%)", "A barangay with at least this share of citations is flagged for deployment."],
-  peakWindowSharePct: ["Peak-hours share (%)", "The busiest 3-hour window is flagged when it holds at least this share."],
-  topViolationSharePct: ["Dominant violation share (%)", "A violation making up at least this share of all violations is flagged."],
-  repeatMin: ["Repeat offender (citations)", "A motorist cited this many times counts as a repeat offender."],
-  repeatMotoristsMin: ["Repeat offenders needed", "How many repeat offenders are needed before it is flagged."],
-  unpaidPct: ["Unpaid share (%)", "Flagged when this share of aged citations is still unpaid."],
-  unpaidAgeDays: ["Aged after (days)", "How old a citation must be before it counts as overdue."],
-  workloadSharePct: ["Enforcer workload share (%)", "Flagged when one enforcer issued at least this share of citations."],
-  trendChangePct: ["Trend change (%)", "A rise or fall of at least this much versus the previous period is flagged."],
-  minSample: ["Minimum citations", "Time-based rules need at least this many citations to be reliable."],
+  hotspotSharePct: ["Hotspot share (%)", "A barangay with at least this share of citations is flagged for additional deployment."],
+  peakWindowSharePct: ["Peak-hour share (%)", "The busiest three-hour window is flagged when it accounts for at least this share of citations."],
+  topViolationSharePct: ["Dominant violation share (%)", "A violation accounting for at least this share of all violations is flagged."],
+  repeatMin: ["Repeat offender (citations)", "A motorist cited at least this many times is considered a repeat offender."],
+  repeatMotoristsMin: ["Repeat offenders needed", "Number of repeat offenders required before this finding is reported."],
+  unpaidPct: ["Unpaid share (%)", "Reported when at least this share of overdue citations remains unpaid."],
+  unpaidAgeDays: ["Overdue after (days)", "Age at which an unpaid citation is considered overdue."],
+  workloadSharePct: ["Enforcer workload share (%)", "Reported when a single enforcer issued at least this share of citations."],
+  trendChangePct: ["Trend change (%)", "Reported when citations increase or decrease by at least this much compared with the previous period."],
+  minSample: ["Minimum citations", "Minimum number of citations required for time-based findings to be considered reliable."],
 };
 
 const DAY_MS = 86400000;
@@ -102,7 +102,7 @@ export function generateInsights(citations, opts = {}) {
   if (total === 0) {
     return {
       insights: [], normal: [],
-      summary: "No citations were recorded in this period, so there is nothing to base a recommendation on.",
+      summary: "No citations were recorded in this period. There is no data on which to base recommendations.",
       facts: { total: 0 },
     };
   }
@@ -121,10 +121,10 @@ export function generateInsights(citations, opts = {}) {
     const next = brgyRank.slice(1, 3).map(([n, k]) => `${n} (${k})`).join(", ");
     add({
       id: "deploy-where", category: "Enforcer deployment", area: "Where to deploy",
-      finding: `${topName} recorded ${plural(topCount, "citation")}, ${r1(share)}% of the ${mapped} citations with a location.` + (next ? ` Next: ${next}.` : ""),
-      recommendation: `Assign more enforcers or regular patrols to ${topName}, and review its traffic signage and enforcement hours.`,
+      finding: `${topName} recorded ${plural(topCount, "citation")}, or ${r1(share)}% of the ${mapped} citations with a recorded location.` + (next ? ` Next highest: ${next}.` : ""),
+      recommendation: `Assign additional enforcers or regular patrols to ${topName}, and review traffic signage and enforcement hours in the area.`,
       evidence: brgyRank.slice(0, 5).map(([n, k]) => `${n}: ${k} (${r1(pct(k, mapped))}%)`),
-      normalNote: `No single barangay dominates (highest is ${topName} at ${r1(share)}%, below the ${s.hotspotSharePct}% threshold).`,
+      normalNote: `No barangay reached the ${s.hotspotSharePct}% threshold (highest: ${topName}, ${r1(share)}%).`,
     }, share, s.hotspotSharePct);
   }
 
@@ -148,13 +148,13 @@ export function generateInsights(citations, opts = {}) {
     const topDay = weekdays.indexOf(Math.max(...weekdays));
     add({
       id: "deploy-when", category: "Enforcer deployment", area: "When to deploy",
-      finding: `${r1(share)}% of citations were issued between ${hourLabel(best.start)} and ${hourLabel(best.start + 3)}. The busiest weekday is ${WEEKDAYS[topDay]} (${weekdays[topDay]} citations).`,
-      recommendation: `Schedule patrol shifts to cover ${hourLabel(best.start)}–${hourLabel(best.start + 3)}, especially on ${WEEKDAYS[topDay]}s, and use quieter hours for rest or other duties.`,
+      finding: `${r1(share)}% of citations were issued between ${hourLabel(best.start)} and ${hourLabel(best.start + 3)}. The busiest day is ${WEEKDAYS[topDay]} (${weekdays[topDay]} citations).`,
+      recommendation: `Schedule patrol shifts to cover ${hourLabel(best.start)} to ${hourLabel(best.start + 3)}, particularly on ${WEEKDAYS[topDay]}s.`,
       evidence: WEEKDAYS.map((d, i) => `${d}: ${weekdays[i]}`),
-      normalNote: `Citations are spread across the day (busiest window holds ${r1(share)}%, below the ${s.peakWindowSharePct}% threshold).`,
+      normalNote: `Citations are spread throughout the day. The busiest window accounts for ${r1(share)}%, below the ${s.peakWindowSharePct}% threshold.`,
     }, share, s.peakWindowSharePct);
   } else {
-    normal.push({ area: "When to deploy", note: `Only ${timed} citation(s) with a time recorded; at least ${s.minSample} are needed for a reliable pattern.` });
+    normal.push({ area: "When to deploy", note: `Only ${timed} citation(s) have a recorded time. At least ${s.minSample} are required to identify a reliable pattern.` });
   }
 
   // ---- 3. WHICH violation to address: dominant violation -------------------
@@ -174,10 +174,10 @@ export function generateInsights(citations, opts = {}) {
     const share = pct(vCount, violTotal);
     add({
       id: "policy-violation", category: "Policy formulation", area: "Most common violation",
-      finding: `"${vName}" accounts for ${r1(share)}% of all violations (${vCount} of ${violTotal}).`,
-      recommendation: `Consider a targeted information campaign or stricter enforcement for "${vName}", and review whether the current penalty is discouraging it.`,
+      finding: `"${vName}" is the most frequently cited violation, accounting for ${r1(share)}% of all violations (${vCount} of ${violTotal}).`,
+      recommendation: `Consider a targeted information campaign or stricter enforcement for "${vName}", and review whether the current penalty is an effective deterrent.`,
       evidence: violRank.slice(0, 5).map(([n, k]) => `${n}: ${k} (${r1(pct(k, violTotal))}%)`),
-      normalNote: `Violations are varied (most common is "${vName}" at ${r1(share)}%, below the ${s.topViolationSharePct}% threshold).`,
+      normalNote: `Violations are varied. The most common, "${vName}", accounts for ${r1(share)}%, below the ${s.topViolationSharePct}% threshold.`,
     }, share, s.topViolationSharePct);
   }
 
@@ -192,10 +192,10 @@ export function generateInsights(citations, opts = {}) {
   const repeaters = [...byMotorist.values()].filter(m => m.count >= s.repeatMin).sort((a, b) => b.count - a.count);
   add({
     id: "policy-repeat", category: "Policy formulation", area: "Repeat offenders",
-    finding: `${plural(repeaters.length, "motorist")} ${repeaters.length === 1 ? "has" : "have"} been cited ${s.repeatMin} or more times in this period.`,
-    recommendation: "Consider a mandatory road-safety seminar, escalating penalties for repeat violations, or a watch list for follow-up.",
+    finding: `${plural(repeaters.length, "motorist")} ${repeaters.length === 1 ? "has" : "have"} been cited ${s.repeatMin} or more times during this period.`,
+    recommendation: "Consider a mandatory road safety seminar, escalating penalties for repeat violations, or a monitoring list for follow-up.",
     evidence: repeaters.slice(0, 5).map(m => `${m.name}: ${m.count} citations`),
-    normalNote: `${plural(repeaters.length, "repeat offender")} found; below the ${s.repeatMotoristsMin} needed to flag a pattern.`,
+    normalNote: `${plural(repeaters.length, "repeat offender")} identified, below the ${s.repeatMotoristsMin} required to report a pattern.`,
   }, repeaters.length, s.repeatMotoristsMin);
 
   // ---- 5. Do the penalties work: unpaid, aged citations --------------------
@@ -210,13 +210,13 @@ export function generateInsights(citations, opts = {}) {
     const amount = unpaid.reduce((a, c) => a + (Number(c.amount ?? c.fine) || 0), 0);
     add({
       id: "policy-unpaid", category: "Policy formulation", area: "Unpaid citations",
-      finding: `${unpaid.length} of ${aged.length} citations older than ${s.unpaidAgeDays} days are still unpaid (${r1(share)}%), worth PHP ${amount.toLocaleString("en-PH")}.`,
-      recommendation: "Send SMS reminders, make QR Ph payment more visible on the ticket, and consider a payment deadline with a clear consequence.",
+      finding: `${unpaid.length} of ${aged.length} citations older than ${s.unpaidAgeDays} days remain unpaid (${r1(share)}%), totaling PHP ${amount.toLocaleString("en-PH")}.`,
+      recommendation: "Send SMS reminders, make the QR Ph payment option more prominent on the citation ticket, and consider setting a payment deadline with a defined consequence.",
       evidence: [`Unpaid: ${unpaid.length}`, `Paid: ${aged.length - unpaid.length}`, `Outstanding amount: PHP ${amount.toLocaleString("en-PH")}`],
-      normalNote: `Most aged citations are being paid (${r1(share)}% unpaid, below the ${s.unpaidPct}% threshold).`,
+      normalNote: `Most overdue citations have been paid. ${r1(share)}% remain unpaid, below the ${s.unpaidPct}% threshold.`,
     }, share, s.unpaidPct);
   } else {
-    normal.push({ area: "Unpaid citations", note: `No citations older than ${s.unpaidAgeDays} days in this period yet.` });
+    normal.push({ area: "Unpaid citations", note: `No citations in this period are older than ${s.unpaidAgeDays} days.` });
   }
 
   // ---- 6. Workload balance among enforcers ---------------------------------
@@ -233,10 +233,10 @@ export function generateInsights(citations, opts = {}) {
     if (others >= 1) {
       add({
         id: "deploy-workload", category: "Enforcer deployment", area: "Enforcer workload",
-        finding: `${eName} issued ${r1(share)}% of citations (${eCount} of ${total}). ${plural(enfRank.length, "enforcer")} issued citations out of ${Math.max(registered, enfRank.length)} registered.`,
-        recommendation: "Rebalance patrol assignments so enforcement does not depend on one or two people, and rotate coverage areas and shifts.",
+        finding: `${eName} issued ${r1(share)}% of citations (${eCount} of ${total}). ${enfRank.length} of ${Math.max(registered, enfRank.length)} registered enforcers issued citations.`,
+        recommendation: "Redistribute patrol assignments so that enforcement does not depend on one or two enforcers, and rotate shifts and coverage areas.",
         evidence: enfRank.slice(0, 5).map(([n, k]) => `${n}: ${k} (${r1(pct(k, total))}%)`),
-        normalNote: `Workload is spread out (busiest enforcer issued ${r1(share)}%, below the ${s.workloadSharePct}% threshold).`,
+        normalNote: `Workload is evenly distributed. The most active enforcer issued ${r1(share)}% of citations, below the ${s.workloadSharePct}% threshold.`,
       }, share, s.workloadSharePct);
     }
   }
@@ -247,12 +247,12 @@ export function generateInsights(citations, opts = {}) {
     const up = change >= 0;
     add({
       id: "trend", category: "Policy formulation", area: "Trend",
-      finding: `Citations ${up ? "rose" : "fell"} ${r1(Math.abs(change))}% compared with the previous period (${previous.length} before, ${total} now).`,
+      finding: `Citations ${up ? "increased" : "decreased"} by ${r1(Math.abs(change))}% compared with the previous period (${previous.length} previously, ${total} currently).`,
       recommendation: up
-        ? "Check what changed (more patrols, a new ordinance, an event) and whether the rise is a real increase in violations or just more enforcement."
-        : "Check whether the drop is better compliance or reduced patrol activity before drawing conclusions.",
+        ? "Determine the cause, such as additional patrols, a new ordinance or a local event, and whether the increase reflects more violations or more enforcement activity."
+        : "Determine whether the decrease reflects improved compliance or reduced patrol activity before drawing conclusions.",
       evidence: [`Previous period: ${previous.length}`, `This period: ${total}`],
-      normalNote: `Volume is steady (${up ? "+" : "-"}${r1(Math.abs(change))}% versus the previous period, below the ${s.trendChangePct}% threshold).`,
+      normalNote: `Citation volume is stable (${up ? "+" : "-"}${r1(Math.abs(change))}% compared with the previous period, below the ${s.trendChangePct}% threshold).`,
     }, Math.abs(change), s.trendChangePct);
   }
 
@@ -261,8 +261,8 @@ export function generateInsights(citations, opts = {}) {
   if (noGps > 0 && pct(noGps, total) >= 20) {
     insights.push({
       id: "data-gps", category: "Data quality", area: "Missing locations", priority: pct(noGps, total) >= 40 ? "High" : "Medium",
-      finding: `${noGps} of ${total} citations (${r1(pct(noGps, total))}%) have no usable location, so they are left out of the hotspot rules.`,
-      recommendation: "Remind enforcers to wait for the GPS lock before saving a citation so hotspot recommendations stay accurate.",
+      finding: `${noGps} of ${total} citations (${r1(pct(noGps, total))}%) have no usable location and are excluded from the hotspot findings.`,
+      recommendation: "Remind enforcers to wait for a GPS lock before saving a citation to keep the hotspot findings accurate.",
       evidence: [`With location: ${mapped}`, `Without location: ${noGps}`],
     });
   }
@@ -272,9 +272,9 @@ export function generateInsights(citations, opts = {}) {
 
   const high = insights.filter(i => i.priority === "High");
   const summary = insights.length === 0
-    ? `Across ${total} citations, no rule crossed its threshold. Enforcement looks balanced for this period.`
+    ? `Across ${total} citations, no indicator exceeded its threshold. Enforcement appears balanced for this period.`
     : `${plural(insights.length, "recommendation")} for ${total} citations` +
-      (high.length ? `; ${high.length} ${high.length === 1 ? "is" : "are"} high priority: ${high.map(h => h.area.toLowerCase()).join(", ")}.` : ", none high priority.");
+      (high.length ? `; ${high.length} ${high.length === 1 ? "is" : "are"} high priority (${high.map(h => h.area.toLowerCase()).join(", ")}).` : "; none are high priority.");
 
   return { insights, normal, summary, facts: { total, mapped, timed } };
 }
@@ -300,10 +300,10 @@ export function buildInsightsModel({ result, settings, periodLabel, generatedBy,
       {
         title: "Recommendations", headers: ["Priority", "Area", "Finding", "Recommended action"],
         rows: result.insights.map(i => [i.priority, i.area, i.finding, i.recommendation]),
-        note: "Recommendations come from simple rules applied to the citation records. They support, and do not replace, the judgment of LPSO officials.",
+        note: "Recommendations are generated by rules applied to existing citation records. They are intended to support, not replace, the decisions of LPSO officials.",
       },
       {
-        title: "Within normal range", headers: ["Area", "Note"],
+        title: "Areas within normal range", headers: ["Area", "Note"],
         rows: result.normal.map(n => [n.area, n.note]),
       },
       {
