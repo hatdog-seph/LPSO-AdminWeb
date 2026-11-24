@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Search, Eye, Wallet, Clock3, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { Search, Eye, Wallet, Clock3, CheckCircle2, XCircle, RefreshCw, FileText } from "lucide-react";
 import { C, cellStyle } from "../theme.js";
 import { peso, fmtDate } from "../data/geoData.js";
 import PageHeader from "../components/PageHeader.jsx";
@@ -7,6 +7,7 @@ import Panel from "../components/Panel.jsx";
 import TicketStat from "../components/TicketStat.jsx";
 import { useTrafficData } from "../context/TrafficDataContext.jsx";
 import PaymentDrawer, { PAYMENT_STATUS_TONE } from "../components/PaymentDrawer.jsx";
+import ReceiptDialog from "../components/ReceiptDialog.jsx";
 
 const STATUS_OPTIONS = [
   { value: "pending", label: "Pending" },
@@ -35,13 +36,14 @@ function StatusPill({ status, label }) {
 }
 
 export default function PaymentVerificationView({ goTab }) {
-  const { payments, paymentsLoading, paymentsError, refreshAllPendingPayments } = useTrafficData();
+  const { payments, paymentsLoading, paymentsError, refreshAllPendingPayments, citations = [] } = useTrafficData();
 
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [open, setOpen] = useState(null);
+  const [receipt, setReceipt] = useState(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [refreshAllMsg, setRefreshAllMsg] = useState("");
 
@@ -178,10 +180,18 @@ export default function PaymentVerificationView({ goTab }) {
                   <td style={cellStyle}>{fmtDate(new Date(p.createdAt))}</td>
                   <td style={cellStyle}><StatusPill status={p.status} label={p.statusLabel} /></td>
                   <td style={cellStyle}>
-                    <button className="et-btn" title="View details" onClick={() => setOpen(p)}
-                      style={{ padding: 6, borderRadius: 6, background: C.accentSoft, color: C.accentDark }}>
-                      <Eye size={14} />
-                    </button>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="et-btn" title="View details" onClick={() => setOpen(p)}
+                        style={{ padding: 6, borderRadius: 6, background: C.accentSoft, color: C.accentDark }}>
+                        <Eye size={14} />
+                      </button>
+                      {p.status === "paid" && (
+                        <button className="et-btn" title="View receipt" onClick={() => setReceipt(p)}
+                          style={{ padding: 6, borderRadius: 6, background: C.successSoft, color: C.successDark }}>
+                          <FileText size={14} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -192,6 +202,14 @@ export default function PaymentVerificationView({ goTab }) {
           </table>
         </div>
       </Panel>
+
+      {receipt && (
+        <ReceiptDialog
+          payment={receipt}
+          citation={citations.find(c => c.id === receipt.citationId)}
+          onClose={() => setReceipt(null)}
+        />
+      )}
 
       {open && (
         <>
