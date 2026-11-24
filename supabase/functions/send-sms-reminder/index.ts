@@ -1,7 +1,6 @@
-// FILE PATH: AdminWeb/supabase/functions/send-sms-reminder/index.ts  (NEW file - rename this file to index.ts)
 // Supabase Edge Function: send-sms-reminder
 // Body: { citation_id: string, deadline: "YYYY-MM-DD" }
-// Secrets (supabase secrets set ...): SEMAPHORE_API_KEY, SEMAPHORE_SENDER_NAME (optional), PORTAL_URL
+// Secrets: TEXTBEE_API_KEY, TEXTBEE_DEVICE_ID, PORTAL_URL (set in Supabase > Edge Functions > Secrets)
 // SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
@@ -45,6 +44,10 @@ Deno.serve(async (req) => {
   const { data: profile } = await db.from("profiles").select("role").eq("id", userData.user.id).single();
   if (!profile || !/^admin/i.test(profile.role || "")) return json({ error: "Only administrators can send SMS." }, 403);
 
+  const apiKey = (Deno.env.get("TEXTBEE_API_KEY") || "").trim();
+  const deviceId = (Deno.env.get("TEXTBEE_DEVICE_ID") || "").trim();
+  if (!apiKey || !deviceId) return json({ error: "SMS provider is not configured yet (missing TEXTBEE_API_KEY or TEXTBEE_DEVICE_ID secret)." }, 500);
+
   // 2. Validate input.
   let body: { citation_id?: string; deadline?: string };
   try { body = await req.json(); } catch { return json({ error: "Invalid request body." }, 400); }
@@ -84,21 +87,26 @@ Deno.serve(async (req) => {
     .select("sms_id").single();
   if (logErr) return json({ error: "Could not write the SMS log." }, 500);
 
-  // 6. Send through Semaphore (Philippine SMS gateway). Swap this block for another provider if needed.
+  // 6. Send through TextBee (your own Android phone as the SMS gateway). Needs E.164 numbers (+639...).
   try {
-    const params = new URLSearchParams({ apikey: Deno.env.get("SEMAPHORE_API_KEY")!, number: phone, message });
-    const sender = Deno.env.get("SEMAPHORE_SENDER_NAME");
-    if (sender) params.set("sendername", sender);
+    const e164 = "+63" + phone.slice(1); // 09171234567 -> +639171234567
+    const res = await fetch(`https://api.textbee.dev/api/v1/gateway/devices/${encodeURIComponent(deviceId)}/send-sms`, {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ recipients: [e164], message }),
+    });
+    const raw = await res.text();
+    let payload: any = null;
+    try { payload = JSON.parse(raw); } catch { /* not JSON */ }
 
-    const res = await fetch("https://api.semaphore.co/api/v4/messages", { method: "POST", body: params });
-    const payload = await res.json().catch(() => null);
-    const first = Array.isArray(payload) ? payload[0] : null;
-
-    if (!res.ok || !first) {
-      await db.from("sms_log").update({ status: "failed", error_detail: JSON.stringify(payload).slice(0, 500) }).eq("sms_id", logRow.sms_id);
-      return json({ error: "The SMS provider rejected the message." }, 502);
+    if (!res.ok) {
+      await db.from("sms_log").update({ status: "failed", error_detail: `HTTP ${res.status}: ${raw}`.slice(0, 500) }).eq("sms_id", logRow.sms_id);
+      const hint = res.status === 401 || res.status === 403 ? " Check the TEXTBEE_API_KEY secret."
+        : res.status === 404 ? " Check the TEXTBEE_DEVICE_ID secret." : "";
+      return json({ error: `The SMS provider rejected the message (HTTP ${res.status}).${hint}` }, 502);
     }
-    await db.from("sms_log").update({ status: "sent", provider_message_id: String(first.message_id ?? "") }).eq("sms_id", logRow.sms_id);
+    const providerId = payload?.data?.smsBatchId ?? payload?.data?._id ?? payload?.smsBatchId ?? "";
+    await db.from("sms_log").update({ status: "sent", provider_message_id: String(providerId) }).eq("sms_id", logRow.sms_id);
     return json({ ok: true });
   } catch (e) {
     await db.from("sms_log").update({ status: "failed", error_detail: String(e).slice(0, 500) }).eq("sms_id", logRow.sms_id);
