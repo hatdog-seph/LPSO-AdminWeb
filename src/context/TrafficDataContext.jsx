@@ -129,7 +129,7 @@ function fromPaymentRow(row) {
 const CITATION_SELECT = `
   citation_id, ticket_number, enforcer_id, motorist_id, vehicle_id,
   ordinance_id, location_id, issued_at, status, motorist_full_name,
-  fine_amount, qr_code_data, is_synced,
+  fine_amount, qr_code_data, is_synced, vehicle_photo_path,
   motorist:motorist_id ( license_number, contact_number ),
   vehicle:vehicle_id ( plate_number, vehicle_type ),
   ordinance:ordinance_id ( ordinance_id, ordinance_code, violation_description, fine_amount ),
@@ -184,6 +184,7 @@ function fromCitationRow(row, barangays) {
     status: row.status || "Pending",
     synced: row.is_synced !== false,
     qrCodeData: row.qr_code_data || null,
+    photoPath: row.vehicle_photo_path || null,
   };
 }
 

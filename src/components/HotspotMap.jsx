@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import L from "leaflet";
 import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, Popup, useMap } from "react-leaflet";
 import { C } from "../theme.js";
+import { supabase } from "../lib/supabaseClient.js";
 
 const LIBMANAN_CENTER = [13.6938, 123.0620];
 
@@ -65,6 +66,41 @@ function FocusController({ highlight, stats }) {
 }
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString("en-PH")}`;
+
+// Vehicle photo from the private citation-photos bucket. A short-lived signed
+// link is requested only when the photo is actually on screen.
+function VehiclePhoto({ path, visible }) {
+  const [url, setUrl] = useState(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!path || !visible || url) return;
+    let cancelled = false;
+    supabase.storage.from("citation-photos").createSignedUrl(path, 3600).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error || !data?.signedUrl) setFailed(true); else setUrl(data.signedUrl);
+    });
+    return () => { cancelled = true; };
+  }, [path, visible, url]);
+
+  if (!path) {
+    return <div style={{ marginTop: 10, fontSize: 11.5, color: C.inkSoft }}>No vehicle photo</div>;
+  }
+  if (failed) {
+    return <div style={{ marginTop: 10, fontSize: 11.5, color: C.inkSoft }}>Photo could not be loaded</div>;
+  }
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 12.5, color: C.inkSoft, marginBottom: 4 }}>Vehicle photo</div>
+      {url ? (
+        <a href={url} target="_blank" rel="noreferrer" title="Open full size">
+          <img src={url} alt="Vehicle" style={{ display: "block", width: "100%", height: 150, objectFit: "cover", borderRadius: 8, border: `1px solid ${C.line}` }} />
+        </a>
+      ) : (
+        <div style={{ height: 150, borderRadius: 8, background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11.5, color: C.inkSoft }}>Loading photo…</div>
+      )}
+    </div>
+  );
+}
 
 function StatusChip({ status }) {
   const s = status || "Pending";
@@ -139,6 +175,7 @@ function StackedPopup({ items }) {
             <div style={{ color: C.inkSoft }}>Issued</div><div>{c.date || "—"}</div>
             <div style={{ color: C.inkSoft }}>Location</div><div>{c.location || location}</div>
           </div>
+          <VehiclePhoto key={c.id} path={c.photoPath} visible={sel !== null} />
         </div>
       </div>
     </div>
@@ -192,6 +229,7 @@ function SingleCitationMarker({ c }) {
             <div><b>Fee:</b> ₱{fee.toLocaleString("en-PH")}</div>
             <div><b>Status:</b> {c.status || "Pending"}</div>
           </div>
+          <VehiclePhoto path={c.photoPath} visible />
         </div>
       </Popup>
     </CircleMarker>
