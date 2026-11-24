@@ -94,10 +94,10 @@ function VehiclePhoto({ path, visible }) {
       <div style={{ fontSize: 12.5, color: C.inkSoft, marginBottom: 4 }}>Vehicle photo</div>
       {url ? (
         <a href={url} target="_blank" rel="noreferrer" title="Open full size">
-          <img src={url} alt="Vehicle" style={{ display: "block", width: "100%", height: 150, objectFit: "cover", borderRadius: 8, border: `1px solid ${C.line}` }} />
+          <img src={url} alt="Vehicle" style={{ display: "block", width: "100%", height: 120, objectFit: "cover", borderRadius: 8, border: `1px solid ${C.line}` }} />
         </a>
       ) : (
-        <div style={{ height: 150, borderRadius: 8, background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11.5, color: C.inkSoft }}>Loading photo…</div>
+        <div style={{ height: 120, borderRadius: 8, background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11.5, color: C.inkSoft }}>Loading photo…</div>
       )}
     </div>
   );
@@ -198,7 +198,7 @@ function StackMarker({ group }) {
         popupclose: () => setResetKey(k => k + 1),
       }}
     >
-      <Popup minWidth={250} maxWidth={250} closeButton>
+      <Popup minWidth={250} maxWidth={250} maxHeight={250} autoPanPaddingTopLeft={[20, 70]} autoPanPaddingBottomRight={[20, 60]} closeButton>
         <StackedPopup key={resetKey} items={group.items} />
       </Popup>
     </Marker>
@@ -221,7 +221,7 @@ function SingleCitationMarker({ c }) {
           {location} · ₱{fee.toLocaleString("en-PH")}
         </div>
       </Tooltip>
-      <Popup minWidth={250} maxWidth={250} closeButton>
+      <Popup minWidth={250} maxWidth={250} maxHeight={250} autoPanPaddingTopLeft={[20, 70]} autoPanPaddingBottomRight={[20, 60]} closeButton>
         <StackedPopup items={[c]} />
       </Popup>
     </CircleMarker>
@@ -343,7 +343,7 @@ export default function HotspotMap({ compact = false, highlight, onSelect, stats
                 eventHandlers={onSelect ? { click: () => onSelect(b.id) } : undefined}
               >
                 {(byBarangay.get(b.id) || []).length > 0 && (
-                  <Popup minWidth={250} maxWidth={250} closeButton>
+                  <Popup minWidth={250} maxWidth={250} maxHeight={250} autoPanPaddingTopLeft={[20, 70]} autoPanPaddingBottomRight={[20, 60]} closeButton>
                     <StackedPopup key={b.id} items={byBarangay.get(b.id)} heading={b.name} />
                   </Popup>
                 )}
@@ -380,7 +380,7 @@ export default function HotspotMap({ compact = false, highlight, onSelect, stats
         title={expanded ? "Exit full screen (Esc)" : "Widen map to full screen"}
         aria-label={expanded ? "Exit full screen map" : "Widen map to full screen"}
         style={{
-          position: "absolute", left: "50%", bottom: 14, transform: "translateX(-50%)", zIndex: 1100,
+          position: "absolute", left: "50%", bottom: 14, transform: "translateX(-50%)", zIndex: 650,
           display: "flex", alignItems: "center", gap: 7, padding: "8px 14px",
           background: "rgba(255,255,255,.96)", color: C.ink, border: `1px solid ${C.line}`, borderRadius: 999,
           boxShadow: "0 2px 10px rgba(15,23,42,.18)", cursor: "pointer", font: "600 12px Inter, sans-serif",
