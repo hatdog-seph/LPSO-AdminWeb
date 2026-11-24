@@ -1,7 +1,6 @@
 // Offense tracking for the admin side.
 //
-// An offense number counts how many times the same motorist (or the same
-// plate number) has been cited for the same violation, in date order.
+// An offense number counts how many times the same motorist has been cited for the same violation, in date order.
 // The 1st citation for a violation is the 1st offense, the next is the 2nd.
 // Voided citations are ignored. This matches the check done in the enforcer app.
 
@@ -26,8 +25,10 @@ function violationsOf(c) {
   return out;
 }
 
+// Same person: matched by motorist record. The plate number is used only when a
+// record has no motorist link, so different people who share a plate are not merged.
 const sameMotorist = (a, b) => {
-  if (a.motoristId && b.motoristId && a.motoristId === b.motoristId) return true;
+  if (a.motoristId && b.motoristId) return a.motoristId === b.motoristId;
   const pa = plateKey(a);
   return !!pa && pa === plateKey(b);
 };
