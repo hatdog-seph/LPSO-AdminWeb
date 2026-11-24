@@ -1,6 +1,6 @@
 import React from "react";
 import lpsoLogo from "../data/lpso_logo.png";
-import { LayoutDashboard, Ticket, MapPinned, ShieldCheck, ScrollText, Users, ShieldAlert, BarChart3, CreditCard } from "lucide-react";
+import { LayoutDashboard, Ticket, MapPinned, ShieldCheck, ScrollText, Users, ShieldAlert, BarChart3, CreditCard, Lightbulb } from "lucide-react";
 import { C } from "../theme.js";
 
 
@@ -10,6 +10,7 @@ export const NAV = [
   { id: "motorists", label: "Motorists", icon: Users },
   { id: "map", label: "Hotspot map", icon: MapPinned },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "insights", label: "Policy Insights", icon: Lightbulb },
   { id: "enforcers", label: "Enforcers", icon: ShieldCheck },
   { id: "ordinances", label: "Ordinances", icon: ScrollText },
   { id: "reports", label: "Enforcer Reports", icon: ShieldAlert },

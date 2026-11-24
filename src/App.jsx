@@ -11,6 +11,7 @@ import OrdinancesView from "./views/OrdinancesView.jsx";
 import MotoristsView from "./views/MotoristsView.jsx";
 import EnforcerReportsView from "./views/EnforcerReportsView.jsx";
 import AnalyticsView from "./views/AnalyticsView.jsx";
+import PolicyInsightsView from "./views/PolicyInsightsView.jsx";
 import PaymentVerificationView from "./views/PaymentVerificationView.jsx";
 import LoginView from "./views/LoginView.jsx";
 import { TrafficDataProvider } from "./context/TrafficDataContext.jsx";
@@ -18,7 +19,7 @@ import { useAuth } from "./context/AuthContext.jsx";
 
 const TITLES = {
   dashboard: "Dashboard", citations: "Citations", motorists: "Motorists", map: "Hotspot map",
-  enforcers: "Enforcers", ordinances: "Ordinances", reports: "Enforcer Reports", analytics: "Analytics",
+  enforcers: "Enforcers", ordinances: "Ordinances", reports: "Enforcer Reports", analytics: "Analytics", insights: "Policy Insights",
   payments: "Payment Verification",
 };
 
@@ -51,6 +52,7 @@ export default function App() {
           {tab === "ordinances" && <OrdinancesView />}
           {tab === "reports" && <EnforcerReportsView />}
           {tab === "analytics" && <AnalyticsView />}
+          {tab === "insights" && <PolicyInsightsView />}
           {tab === "payments" && <PaymentVerificationView goTab={setTab} />}
         </main>
       </div>

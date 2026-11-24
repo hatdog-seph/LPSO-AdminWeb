@@ -135,7 +135,7 @@ const csvCell = (v) => {
 export function toCsv(m) {
   // One clean table (a header row, then one row per citation) so it opens
   // straight into Excel / Google Sheets and can be filtered or pivoted.
-  const lines = [RECORD_HEADERS, ...m.records];
+  const lines = m.csv ? [m.csv.headers, ...m.csv.rows] : [RECORD_HEADERS, ...m.records];
   // BOM so Excel opens UTF-8 correctly
   return "\ufeff" + lines.map(l => l.map(csvCell).join(",")).join("\r\n");
 }
@@ -159,7 +159,7 @@ export async function toXlsxBlob(m) {
     views: [{ showGridLines: false }],
     pageSetup: { paperSize: 9, orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.5, right: 0.5, top: 0.6, bottom: 0.6, header: 0.3, footer: 0.3 } },
   });
-  const widths = [38, 34, 14, 20];
+  const widths = m.widths || [38, 34, 14, 20];
   ws.columns = widths.map(w => ({ width: w }));
   const totalW = widths.reduce((a, b) => a + b, 0);
   const lineCount = (text, w) => Math.max(1, Math.ceil(String(text).length / (w * 1.05)));
@@ -251,6 +251,7 @@ export async function toXlsxBlob(m) {
   });
 
   // ---------- Sheet 2: every citation as a filterable table ----------
+  if (m.records) {
   const cs = wb.addWorksheet("Citations", {
     views: [{ state: "frozen", ySplit: 1 }],
     pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
@@ -287,6 +288,8 @@ export async function toXlsxBlob(m) {
     totalRow.eachCell(c => { c.border = { top: { style: "medium", color: { argb: NAVY } } }; });
   } else {
     cs.addRow(["No citations recorded for this period."]).font = { italic: true, color: { argb: "FF98A2B3" } };
+  }
+
   }
 
   const buf = await wb.xlsx.writeBuffer();
