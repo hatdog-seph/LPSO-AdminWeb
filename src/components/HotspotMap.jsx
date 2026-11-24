@@ -121,10 +121,11 @@ function StatusChip({ status }) {
 // toggled with display, so the clicked button is never removed from the page
 // in the middle of its own click (Leaflet treats that as a click on the map
 // and closes the popup).
-function StackedPopup({ items }) {
-  const [sel, setSel] = useState(null);
+function StackedPopup({ items, heading }) {
+  const single = items.length === 1;
+  const [sel, setSel] = useState(single ? 0 : null);
   const font = { fontFamily: "Inter, sans-serif" };
-  const location = items[0].location || items[0].barangay?.name || "Libmanan";
+  const location = heading || items[0].location || items[0].barangay?.name || "Libmanan";
   const c = items[sel ?? 0];
   const violations = c.violations?.length ? c.violations.map(v => v.desc).filter(Boolean) : [c.violation || "—"];
   const stop = (e) => e.stopPropagation();
@@ -134,7 +135,7 @@ function StackedPopup({ items }) {
       {/* LIST */}
       <div style={{ display: sel === null ? "block" : "none" }}>
         <div style={{ padding: "2px 10px 8px" }}>
-          <div style={{ fontWeight: 700, fontSize: 14, color: C.ink }}>{items.length} citations at this spot</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.ink }}>{items.length} citation{items.length === 1 ? "" : "s"} {heading ? `in ${heading}` : "at this spot"}</div>
           <div style={{ fontSize: 12, color: C.inkSoft, marginTop: 2 }}>{location} · click a name for details</div>
         </div>
         <div style={{ maxHeight: 240, overflowY: "auto", borderTop: `1px solid ${C.line}` }}>
@@ -156,10 +157,10 @@ function StackedPopup({ items }) {
 
       {/* DETAILS of the clicked citation */}
       <div style={{ display: sel === null ? "none" : "block" }}>
-        <button type="button" onClick={() => setSel(null)}
+        {!single && <button type="button" onClick={() => setSel(null)}
           style={{ display: "block", width: "100%", textAlign: "left", border: 0, borderBottom: `1px solid ${C.line}`, background: C.bg, color: C.accentDark, fontSize: 12, fontWeight: 600, padding: "8px 10px", cursor: "pointer", borderRadius: "6px 6px 0 0" }}>
           ‹ All {items.length} citations
-        </button>
+        </button>}
         <div style={{ padding: "10px 10px 4px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ flex: "none", width: 22, height: 22, borderRadius: "50%", background: C.sidebar, color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{(sel ?? 0) + 1}</span>
@@ -219,18 +220,8 @@ function SingleCitationMarker({ c }) {
           {location} · ₱{fee.toLocaleString("en-PH")}
         </div>
       </Tooltip>
-      <Popup>
-        <div style={{ minWidth: 190, fontFamily: "Inter, sans-serif" }}>
-          <div style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 5 }}>{c.motorist || "Unknown Motorist"}</div>
-          <div style={{ fontSize: 11.5, lineHeight: 1.6 }}>
-            <div><b>Plate:</b> {c.plateNumber || "—"}</div>
-            <div><b>Violation:</b> {c.violation || "—"}</div>
-            <div><b>Location:</b> {location}</div>
-            <div><b>Fee:</b> ₱{fee.toLocaleString("en-PH")}</div>
-            <div><b>Status:</b> {c.status || "Pending"}</div>
-          </div>
-          <VehiclePhoto path={c.photoPath} visible />
-        </div>
+      <Popup minWidth={250} maxWidth={250} closeButton>
+        <StackedPopup items={[c]} />
       </Popup>
     </CircleMarker>
   );
@@ -242,6 +233,26 @@ export default function HotspotMap({ compact = false, highlight, onSelect, stats
   const height = compact ? 300 : 460;
   const topId = safeStats[0]?.id;
   const groups = groupCitations(citations);
+
+  // Every citation belongs to its nearest barangay (same rule the ranking
+  // uses, ignoring anything farther than 15 km), newest first.
+  const byBarangay = new Map();
+  [...citations]
+    .filter(c => Array.isArray(c.position) && c.position[0] != null && c.position[1] != null &&
+      Number.isFinite(Number(c.position[0])) && Number.isFinite(Number(c.position[1])))
+    .sort((x, y) => String(y.issuedAt || "").localeCompare(String(x.issuedAt || "")))
+    .forEach((c) => {
+      const pos = [Number(c.position[0]), Number(c.position[1])];
+      let best = null, bestD = Infinity;
+      safeStats.forEach((b) => {
+        const d = metersBetween(pos, [b.lat, b.lng]);
+        if (d < bestD) { bestD = d; best = b; }
+      });
+      if (best && bestD <= 15000) {
+        if (!byBarangay.has(best.id)) byBarangay.set(best.id, []);
+        byBarangay.get(best.id).push(c);
+      }
+    });
 
   return (
     <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${C.line}` }}>
@@ -284,6 +295,11 @@ export default function HotspotMap({ compact = false, highlight, onSelect, stats
                 }}
                 eventHandlers={onSelect ? { click: () => onSelect(b.id) } : undefined}
               >
+                {(byBarangay.get(b.id) || []).length > 0 && (
+                  <Popup minWidth={250} maxWidth={250} closeButton>
+                    <StackedPopup key={b.id} items={byBarangay.get(b.id)} heading={b.name} />
+                  </Popup>
+                )}
                 <Tooltip direction="top" offset={[0, -6]} opacity={1}>
                   <div style={{ fontFamily: "Inter, sans-serif" }}>
                     <div style={{ fontWeight: 700, fontSize: 12.5 }}>{b.name}</div>
