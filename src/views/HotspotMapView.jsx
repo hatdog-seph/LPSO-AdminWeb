@@ -63,7 +63,7 @@ export default function HotspotMapView() {
         live
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 16 }}>
+      <div className="rs-map-split" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 300px", gap: 16 }}>
         <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 12, padding: 18 }}>
           <HotspotMap stats={stats} citations={citations} highlight={hover} onSelect={setHover} />
           <p style={{ fontSize: 11.5, color: C.inkFaint, marginTop: 10 }}>
@@ -83,7 +83,7 @@ export default function HotspotMapView() {
             Hotspot ranking · all {stats.length} barangays
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto", maxHeight: 460, paddingRight: 4 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto", maxHeight: "clamp(300px, calc(100dvh - 330px), 900px)", paddingRight: 4 }}>
             {stats.map((b, i) => (
               <div
                 key={b.id}

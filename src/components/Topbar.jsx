@@ -71,7 +71,7 @@ export default function Topbar({ title }) {
             <>
               <div onClick={() => setNotifOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
               <div className="et-fade-in" style={{
-                position: "absolute", top: 44, right: 0, width: 360, maxHeight: 440, overflowY: "auto",
+                position: "absolute", top: 44, right: 0, width: "min(360px, calc(100vw - 24px))", maxHeight: 440, overflowY: "auto",
                 background: C.surface, border: `1px solid ${C.line}`, borderRadius: 12,
                 boxShadow: "0 12px 32px rgba(10,20,15,0.14)", zIndex: 41,
               }}>

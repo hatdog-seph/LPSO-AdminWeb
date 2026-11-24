@@ -57,7 +57,7 @@ export default function OrdinancesView() {
     <div className="et-fade-in">
       <PageHeader title="Ordinances & fine schedule" subtitle="CRUD-managed ordinance master data synchronized with citations, motorists, enforcers, dashboard KPIs, and the map" live />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 14, marginBottom: 18 }}>
+      <div className="rs-kpi4" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 14, marginBottom: 18 }}>
         <TicketStat icon={Link2} label="Active ordinances" value={ordinances.length} sub="Current master records" tone="info" />
         <TicketStat icon={Link2} label="Ordinances cited" value={citedCount} sub="With at least one citation" tone="accent" />
         <TicketStat icon={Link2} label="Linked citations" value={linkedCitations} sub="Using ordinance records" tone="success" />
@@ -113,7 +113,7 @@ export default function OrdinancesView() {
             <div><div style={{ fontSize: 16, fontWeight: 700 }}>{editing.id ? "Edit Ordinance" : "Add Ordinance"}</div><div style={{ fontSize: 11, color: C.inkFaint }}>{editing.id || "New ordinance master record"}</div></div>
             <button type="button" className="et-btn" onClick={close} style={{ padding: 6, background: "transparent", color: C.inkSoft }}><X size={18} /></button>
           </div>
-          <div style={{ padding: 18, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="rs-form2" style={{ padding: 18, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <label style={{ display: "grid", gap: 5, fontSize: 11, color: C.inkSoft, fontWeight: 600 }}>Ordinance code<input required value={editing.code} onChange={e => setEditing(x => ({ ...x, code: e.target.value }))} style={inputStyle} placeholder="MO-2026-001 §1.1" /></label>
             <label style={{ display: "grid", gap: 5, fontSize: 11, color: C.inkSoft, fontWeight: 600 }}>Fine (₱)<input required type="number" min="0" value={editing.fine} onChange={e => setEditing(x => ({ ...x, fine: e.target.value }))} style={inputStyle} placeholder="500" /></label>
             <label style={{ display: "grid", gap: 5, fontSize: 11, color: C.inkSoft, fontWeight: 600, gridColumn: "1 / -1" }}>Violation / description<input required value={editing.desc} onChange={e => setEditing(x => ({ ...x, desc: e.target.value }))} style={inputStyle} placeholder="No helmet / improper protective gear" /></label>

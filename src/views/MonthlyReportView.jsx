@@ -71,7 +71,7 @@ export default function MonthlyReportView({ citations, ordinances, payments, onC
     setExportError("");
     setExporting(format);
     try {
-      await exportReport(format, buildReportModel({ month, year, stats, paymentStats, generatedBy, generatedAt: new Date() }));
+      await exportReport(format, buildReportModel({ month, year, stats, paymentStats, generatedBy, generatedAt: new Date(), citations: monthCitations }));
     } catch (e) {
       console.error(e);
       setExportError("Could not create the file. Please try again.");

@@ -452,7 +452,7 @@ export default function DashboardView({
 
       {/* KPI CARDS */}
 
-      <div
+      <div className="rs-kpi"
         style={{
           display: "grid",
           gridTemplateColumns:
@@ -518,7 +518,7 @@ export default function DashboardView({
 
       {/* HOTSPOTS + TREND */}
 
-      <div
+      <div className="rs-split"
         style={{
           display: "grid",
           gridTemplateColumns:

@@ -154,7 +154,7 @@ export default function CitationsView() {
               <div><div style={{ fontSize: 16, fontWeight: 700 }}>Edit Citation</div><div style={{ fontSize: 11, color: C.inkFaint }}>{editing.id}</div></div>
               <button type="button" className="et-btn" onClick={() => { setShowForm(false); setEditing(null); }} style={{ padding: 6, background: "transparent", color: C.inkSoft }}><X size={18} /></button>
             </div>
-            <div style={{ padding: 18, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="rs-form2" style={{ padding: 18, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <Field label="Motorist"><input required value={editing.motorist} onChange={e => setEditing(x => ({ ...x, motorist: e.target.value }))} style={inputStyle} /></Field>
               <Field label="Plate number"><input required value={editing.plateNumber} onChange={e => setEditing(x => ({ ...x, plateNumber: e.target.value }))} style={inputStyle} /></Field>
               <Field label="Ordinance / Violation"><select value={editing.ordinanceId} onChange={e => { const o = ordinances.find(x => x.id === e.target.value); setEditing(x => ({ ...x, ordinanceId: e.target.value, violation: o?.desc || x.violation })); }} style={inputStyle}>{ordinances.map(o => <option key={o.id} value={o.id}>{o.code} — {o.desc} (₱{Number(o.fine).toLocaleString("en-PH")})</option>)}</select></Field>

@@ -28,7 +28,7 @@ export default function CitationDrawer({ citation, onClose }) {
   const sc = statusColors(citation.status);
   return (
     <div style={{
-      position: "fixed", top: 0, right: 0, bottom: 0, width: 400, background: C.surface,
+      position: "fixed", top: 0, right: 0, bottom: 0, width: "min(400px, 100vw)", background: C.surface,
       borderLeft: `1px solid ${C.line}`, boxShadow: "-8px 0 24px rgba(20,30,25,0.08)",
       zIndex: 40, overflowY: "auto",
     }} className="et-drawer">

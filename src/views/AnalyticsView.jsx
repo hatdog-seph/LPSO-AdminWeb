@@ -123,7 +123,7 @@ export default function AnalyticsView() {
         <TicketStat icon={Clock3} label="Pending amount" value={peso(stats.pendingAmount)} tone="danger" />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16, marginBottom: 16 }}>
+      <div className="rs-split" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16, marginBottom: 16 }}>
         <Panel title="Monthly citation trend">
           {stats.monthlyTrend.length ? (
             <ResponsiveContainer width="100%" height={260}>
@@ -153,7 +153,7 @@ export default function AnalyticsView() {
         </Panel>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+      <div className="rs-pair" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
         <Panel title="Most frequent violations">
           {stats.violationFrequency.length ? (
             <ResponsiveContainer width="100%" height={280}>

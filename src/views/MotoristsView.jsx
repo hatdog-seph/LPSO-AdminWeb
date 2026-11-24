@@ -35,7 +35,7 @@ export default function MotoristsView() {
         live
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 14, marginBottom: 18 }}>
+      <div className="rs-kpi4" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 14, marginBottom: 18 }}>
         <TicketStat icon={Users} label="Unique motorists" value={uniqueMotorists} sub="Name + plate records" tone="info" />
         <TicketStat icon={Ticket} label="Citations" value={rows.length} sub="Live citation records" tone="accent" />
         <TicketStat icon={Banknote} label="Total fees" value={peso(totalFees)} sub="All recorded violations" tone="success" />
