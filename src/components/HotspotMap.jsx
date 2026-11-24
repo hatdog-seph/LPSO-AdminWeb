@@ -1,11 +1,57 @@
-import React, { useEffect } from "react";
-import { MapContainer, TileLayer, CircleMarker, Tooltip, Popup, useMap } from "react-leaflet";
+import React, { useEffect, useState } from "react";
+import L from "leaflet";
+import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, Popup, useMap } from "react-leaflet";
 import { C } from "../theme.js";
 
 const LIBMANAN_CENTER = [13.6938, 123.0620];
 
+// Citations issued within this many meters of each other are shown as ONE
+// place on the map (a numbered marker) instead of stacked dots that hide
+// each other.
+const GROUP_RADIUS_M = 20;
+
 function radiusFor(count, max) {
   return 8 + (count / max) * 22;
+}
+
+function metersBetween(a, b) {
+  const R = 6371000;
+  const dLat = (b[0] - a[0]) * Math.PI / 180;
+  const dLng = (b[1] - a[1]) * Math.PI / 180;
+  const x = Math.sin(dLat / 2) ** 2
+    + Math.cos(a[0] * Math.PI / 180) * Math.cos(b[0] * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+// Groups citations that share (almost) the same spot. Newest first, so the
+// latest citation is always #1 in a group's list.
+export function groupCitations(citations, radiusM = GROUP_RADIUS_M) {
+  const valid = citations.filter(c =>
+    Array.isArray(c.position) && c.position.length >= 2 &&
+    c.position[0] != null && c.position[1] != null &&
+    Number.isFinite(Number(c.position[0])) && Number.isFinite(Number(c.position[1])));
+  const sorted = [...valid].sort((a, b) => String(b.issuedAt || "").localeCompare(String(a.issuedAt || "")));
+  const groups = [];
+  sorted.forEach((c) => {
+    const pos = [Number(c.position[0]), Number(c.position[1])];
+    const hit = groups.find(g => metersBetween(g.center, pos) <= radiusM);
+    if (hit) hit.items.push(c);
+    else groups.push({ center: pos, items: [c] });
+  });
+  return groups.map(g => ({ ...g, key: `grp-${g.items[0].id}` }));
+}
+
+function countIcon(n) {
+  return L.divIcon({
+    className: "",
+    html:
+      `<div style="width:30px;height:30px;border-radius:50%;background:${C.citationMarker};` +
+      `border:3px solid #fff;box-shadow:0 0 0 5px rgba(242,183,5,.28),0 1px 4px rgba(0,0,0,.3);` +
+      `display:flex;align-items:center;justify-content:center;font:700 13px Inter,sans-serif;color:${C.ink}">${n}</div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -16],
+  });
 }
 
 function FocusController({ highlight, stats }) {
@@ -18,11 +64,142 @@ function FocusController({ highlight, stats }) {
   return null;
 }
 
+const peso = (n) => `₱${Number(n || 0).toLocaleString("en-PH")}`;
+
+function StatusChip({ status }) {
+  const s = status || "Pending";
+  const tone = s === "Paid"
+    ? { bg: C.successSoft, fg: C.successDark }
+    : s === "Overdue"
+      ? { bg: C.dangerSoft, fg: C.dangerDark }
+      : { bg: "#FDF1D3", fg: "#8A5A00" };
+  return (
+    <span style={{ flex: "none", fontSize: 11, fontWeight: 600, color: tone.fg, background: tone.bg, borderRadius: 999, padding: "2px 8px" }}>
+      {s}
+    </span>
+  );
+}
+
+// Popup for a spot with several citations: a numbered list first, then the
+// details of ONLY the one that was clicked.
+function StackedPopup({ items }) {
+  const [sel, setSel] = useState(null);
+  const font = { fontFamily: "Inter, sans-serif" };
+  const location = items[0].location || items[0].barangay?.name || "Libmanan";
+
+  if (sel !== null) {
+    const c = items[sel];
+    const violations = c.violations?.length ? c.violations.map(v => v.desc).filter(Boolean) : [c.violation || "—"];
+    return (
+      <div style={{ ...font, width: 250 }}>
+        <button type="button" onClick={() => setSel(null)}
+          style={{ display: "block", width: "100%", textAlign: "left", border: 0, borderBottom: `1px solid ${C.line}`, background: C.bg, color: C.accentDark, fontSize: 12, fontWeight: 600, padding: "8px 10px", cursor: "pointer", borderRadius: "6px 6px 0 0" }}>
+          ‹ All {items.length} citations
+        </button>
+        <div style={{ padding: "10px 10px 4px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ flex: "none", width: 22, height: 22, borderRadius: "50%", background: C.sidebar, color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{sel + 1}</span>
+            <span style={{ flexGrow: 1, fontSize: 14, fontWeight: 700, color: C.ink }}>{c.motorist || "Unknown Motorist"}</span>
+            <StatusChip status={c.status} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "76px 1fr", rowGap: 6, marginTop: 10, fontSize: 12.5, lineHeight: 1.4, color: C.ink }}>
+            <div style={{ color: C.inkSoft }}>Ticket</div><div style={{ fontWeight: 600 }}>{c.ticket || "—"}</div>
+            <div style={{ color: C.inkSoft }}>Plate</div><div>{c.plateNumber || "—"}</div>
+            <div style={{ color: C.inkSoft }}>Violation</div>
+            <div>{violations.map((v, i) => <div key={i}>{v}</div>)}</div>
+            <div style={{ color: C.inkSoft }}>Fine</div><div style={{ fontWeight: 600 }}>{peso(c.amount ?? c.fine)}</div>
+            <div style={{ color: C.inkSoft }}>Issued</div><div>{c.date || "—"}</div>
+            <div style={{ color: C.inkSoft }}>Location</div><div>{c.location || location}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ ...font, width: 250 }}>
+      <div style={{ padding: "2px 10px 8px" }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: C.ink }}>{items.length} citations at this spot</div>
+        <div style={{ fontSize: 12, color: C.inkSoft, marginTop: 2 }}>{location} · click a name for details</div>
+      </div>
+      <div style={{ maxHeight: 240, overflowY: "auto", borderTop: `1px solid ${C.line}` }}>
+        {items.map((c, i) => (
+          <button key={c.id} type="button" onClick={() => setSel(i)}
+            onMouseEnter={(e) => { e.currentTarget.style.background = C.accentSoft; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}
+            style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", boxSizing: "border-box", padding: "9px 10px", border: 0, borderBottom: `1px solid ${C.line}`, background: "#fff", textAlign: "left", cursor: "pointer" }}>
+            <span style={{ flex: "none", width: 22, height: 22, borderRadius: "50%", background: C.sidebar, color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+            <span style={{ flexGrow: 1, minWidth: 0 }}>
+              <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: C.ink }}>{c.motorist || "Unknown Motorist"}</span>
+              <span style={{ display: "block", fontSize: 11.5, color: C.inkSoft }}>{c.plateNumber || "No plate"} · {peso(c.amount ?? c.fine)}</span>
+            </span>
+            <StatusChip status={c.status} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// One numbered marker for a spot with 2+ citations. Hovering (or tapping)
+// opens the list; the popup stays open so a name can be clicked.
+function StackMarker({ group }) {
+  const [resetKey, setResetKey] = useState(0);
+  return (
+    <Marker
+      position={group.center}
+      icon={countIcon(group.items.length)}
+      zIndexOffset={1000}
+      eventHandlers={{
+        mouseover: (e) => e.target.openPopup(),
+        popupclose: () => setResetKey(k => k + 1),
+      }}
+    >
+      <Popup minWidth={250} maxWidth={250} closeButton>
+        <StackedPopup key={resetKey} items={group.items} />
+      </Popup>
+    </Marker>
+  );
+}
+
+function SingleCitationMarker({ c }) {
+  const fee = Number(c.amount ?? c.fine ?? 0);
+  const location = c.location || c.barangay?.name || "Libmanan";
+  return (
+    <CircleMarker
+      center={[Number(c.position[0]), Number(c.position[1])]}
+      radius={6}
+      pathOptions={{ color: "#fff", weight: 2, fillColor: C.citationMarker, fillOpacity: 1 }}
+    >
+      <Tooltip direction="top" offset={[0, -6]}>
+        <div style={{ fontFamily: "Inter, sans-serif", fontSize: 11 }}>
+          <strong>{c.motorist || "Unknown Motorist"}</strong><br />
+          {c.plateNumber || "No plate"} · {c.violation || "Violation"}<br />
+          {location} · ₱{fee.toLocaleString("en-PH")}
+        </div>
+      </Tooltip>
+      <Popup>
+        <div style={{ minWidth: 190, fontFamily: "Inter, sans-serif" }}>
+          <div style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 5 }}>{c.motorist || "Unknown Motorist"}</div>
+          <div style={{ fontSize: 11.5, lineHeight: 1.6 }}>
+            <div><b>Plate:</b> {c.plateNumber || "—"}</div>
+            <div><b>Violation:</b> {c.violation || "—"}</div>
+            <div><b>Location:</b> {location}</div>
+            <div><b>Fee:</b> ₱{fee.toLocaleString("en-PH")}</div>
+            <div><b>Status:</b> {c.status || "Pending"}</div>
+          </div>
+        </div>
+      </Popup>
+    </CircleMarker>
+  );
+}
+
 export default function HotspotMap({ compact = false, highlight, onSelect, stats = [], citations = [] }) {
   const safeStats = stats.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng));
   const max = Math.max(...safeStats.map(s => s.count), 1);
   const height = compact ? 300 : 460;
   const topId = safeStats[0]?.id;
+  const groups = groupCitations(citations);
 
   return (
     <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${C.line}` }}>
@@ -79,42 +256,16 @@ export default function HotspotMap({ compact = false, highlight, onSelect, stats
           );
         })}
 
-        {/* Rendered LAST (on top) so a citation's exact-location dot is
-            always visible, even when it sits on the same coordinates as
-            its barangay's hotspot circle above - admins need to be able
-            to pick out individual citations at a glance. */}
-        {citations.filter(c => Array.isArray(c.position) && c.position.length >= 2).map((c) => {
-          const fee = Number(c.amount ?? c.fine ?? 0);
-          const location = c.location || c.barangay?.name || "Libmanan";
-          return (
-            <CircleMarker
-              key={`citation-${c.id}`}
-              center={[Number(c.position[0]), Number(c.position[1])]}
-              radius={6}
-              pathOptions={{ color: "#fff", weight: 2, fillColor: C.citationMarker, fillOpacity: 1 }}
-            >
-              <Tooltip direction="top" offset={[0, -6]}>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: 11 }}>
-                  <strong>{c.motorist || "Unknown Motorist"}</strong><br />
-                  {c.plateNumber || "No plate"} · {c.violation || "Violation"}<br />
-                  {location} · ₱{fee.toLocaleString("en-PH")}
-                </div>
-              </Tooltip>
-              <Popup>
-                <div style={{ minWidth: 190, fontFamily: "Inter, sans-serif" }}>
-                  <div style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 5 }}>{c.motorist || "Unknown Motorist"}</div>
-                  <div style={{ fontSize: 11.5, lineHeight: 1.6 }}>
-                    <div><b>Plate:</b> {c.plateNumber || "—"}</div>
-                    <div><b>Violation:</b> {c.violation || "—"}</div>
-                    <div><b>Location:</b> {location}</div>
-                    <div><b>Fee:</b> ₱{fee.toLocaleString("en-PH")}</div>
-                    <div><b>Status:</b> {c.status || "Pending"}</div>
-                  </div>
-                </div>
-              </Popup>
-            </CircleMarker>
-          );
-        })}
+        {/* Rendered LAST (on top) so exact-location citations stay visible above
+            the barangay hotspot circles. A spot with ONE citation keeps the plain
+            yellow dot; a spot with several becomes one numbered marker whose
+            popup lists every citation there (newest first). The hotspot ranking
+            still counts every citation - only the markers are grouped. */}
+        {groups.map((g) =>
+          g.items.length === 1
+            ? <SingleCitationMarker key={g.key} c={g.items[0]} />
+            : <StackMarker key={g.key} group={g} />
+        )}
       </MapContainer>
     </div>
   );
