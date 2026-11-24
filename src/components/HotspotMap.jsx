@@ -230,7 +230,7 @@ function SingleCitationMarker({ c }) {
 export default function HotspotMap({ compact = false, highlight, onSelect, stats = [], citations = [] }) {
   const safeStats = stats.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng));
   const max = Math.max(...safeStats.map(s => s.count), 1);
-  const height = compact ? 300 : "clamp(380px, calc(100dvh - 330px), 900px)";
+  const height = compact ? 300 : "clamp(380px, calc(100dvh / var(--ui-zoom, 1) - 330px), 900px)";
   const topId = safeStats[0]?.id;
   const groups = groupCitations(citations);
 

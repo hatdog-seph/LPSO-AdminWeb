@@ -83,7 +83,7 @@ export default function HotspotMapView() {
             Hotspot ranking · all {stats.length} barangays
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto", maxHeight: "clamp(300px, calc(100dvh - 330px), 900px)", paddingRight: 4 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto", maxHeight: "clamp(300px, calc(100dvh / var(--ui-zoom, 1) - 330px), 900px)", paddingRight: 4 }}>
             {stats.map((b, i) => (
               <div
                 key={b.id}

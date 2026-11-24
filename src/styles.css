@@ -392,7 +392,21 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
    (4 stat cards), rs-split (wide + narrow panels), rs-pair (two equal
    panels), rs-map-split (map + ranking list), rs-form2 (two-column form).
 --------------------------------------------------------------- */
-.et-root { height: 100vh; height: 100dvh; }
+/* Scale the whole console up on big monitors so text and controls stay
+   comfortably readable (like a 125% display scale on a 1080p screen). The
+   root height is divided by the zoom so the layout still exactly fills the
+   window. */
+:root { --ui-zoom: 1; }
+@media (min-width: 1600px) { :root { --ui-zoom: 1.1; } }
+@media (min-width: 1800px) { :root { --ui-zoom: 1.25; } }
+@media (min-width: 2400px) { :root { --ui-zoom: 1.5; } }
+@media (min-width: 3200px) { :root { --ui-zoom: 2; } }
+.et-root {
+  zoom: var(--ui-zoom);
+  height: calc(100vh / var(--ui-zoom)) !important;
+  height: calc(100dvh / var(--ui-zoom)) !important;
+}
+@media print { .et-root { zoom: 1 !important; height: auto !important; } }
 .et-main { min-width: 0; }
 .rs-split > *, .rs-pair > *, .rs-map-split > *, .rs-kpi > *, .rs-kpi4 > *, .rs-form2 > * { min-width: 0; }
 
