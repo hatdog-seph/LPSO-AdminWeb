@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Search, Eye, FileWarning, Clock3, Eye as EyeIcon, CheckCircle2, XCircle } from "lucide-react";
+import { Search, Eye, FileWarning, Clock3, Eye as EyeIcon, CheckCircle2, XCircle, Image as ImageIcon } from "lucide-react";
 import { C, cellStyle } from "../theme.js";
 import { fmtDate } from "../data/geoData.js";
 import PageHeader from "../components/PageHeader.jsx";
@@ -113,14 +113,14 @@ export default function EnforcerReportsView() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr>
-                {["Report ID", "Ticket No.", "Enforcer", "Category", "Submitted", "Status", "Actions"].map(h => (
+                {["Report ID", "Ticket No.", "Enforcer", "Category", "Evidence", "Submitted", "Status", "Actions"].map(h => (
                   <th key={h} style={{ textAlign: "left", fontSize: 10.5, color: C.inkFaint, fontWeight: 700, padding: "8px 10px", borderBottom: `1px solid ${C.line}`, textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {reportsLoading && (
-                <tr><td colSpan={7} style={{ padding: 28, textAlign: "center", color: C.inkFaint }}>Loading reports...</td></tr>
+                <tr><td colSpan={8} style={{ padding: 28, textAlign: "center", color: C.inkFaint }}>Loading reports...</td></tr>
               )}
               {!reportsLoading && filtered.map(r => (
                 <tr key={r.id} className="et-row">
@@ -128,6 +128,18 @@ export default function EnforcerReportsView() {
                   <td style={cellStyle}><span className="et-mono">{r.ticket}</span></td>
                   <td style={cellStyle}>{r.enforcer ? `${r.enforcer.name} (${r.enforcer.badge})` : "—"}</td>
                   <td style={cellStyle}>{r.category}</td>
+                  <td style={cellStyle}>
+                    {r.evidencePhotos.length ? (
+                      <span title={`${r.evidencePhotos.length} evidence photo${r.evidencePhotos.length === 1 ? "" : "s"}`} style={{
+                        display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 9px", borderRadius: 999,
+                        fontSize: 11.5, fontWeight: 700, background: C.infoSoft, color: C.infoDark,
+                      }}>
+                        <ImageIcon size={12} /> {r.evidencePhotos.length}
+                      </span>
+                    ) : (
+                      <span style={{ color: C.inkFaint }}>—</span>
+                    )}
+                  </td>
                   <td style={cellStyle}>{fmtDate(new Date(r.createdAt))}</td>
                   <td style={cellStyle}><StatusPill status={r.status} label={r.statusLabel} /></td>
                   <td style={cellStyle}>
@@ -139,7 +151,7 @@ export default function EnforcerReportsView() {
                 </tr>
               ))}
               {!reportsLoading && !filtered.length && (
-                <tr><td colSpan={7} style={{ padding: 28, textAlign: "center", color: C.inkFaint }}>No reports match the current filters.</td></tr>
+                <tr><td colSpan={8} style={{ padding: 28, textAlign: "center", color: C.inkFaint }}>No reports match the current filters.</td></tr>
               )}
             </tbody>
           </table>
@@ -154,4 +166,4 @@ export default function EnforcerReportsView() {
       )}
     </div>
   );
-}
+}

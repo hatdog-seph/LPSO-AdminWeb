@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, ShieldAlert } from "lucide-react";
 import { C } from "../theme.js";
+import EvidencePhotos from "./EvidencePhotos.jsx";
 import { peso, fmtDate, fmtTime } from "../data/geoData.js";
 import { useTrafficData } from "../context/TrafficDataContext.jsx";
 
@@ -84,6 +85,12 @@ export default function ReportDrawer({ report, adminName, onClose }) {
           <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{report.description}</div>
         </Section>
 
+        {report.evidencePhotos?.length > 0 && (
+          <Section title={`Evidence (${report.evidencePhotos.length} photo${report.evidencePhotos.length === 1 ? "" : "s"})`}>
+            <EvidencePhotos paths={report.evidencePhotos} ticket={report.ticket} uploadedAt={report.createdAt} />
+          </Section>
+        )}
+
         <Section title="Related citation">
           <Row k="Ticket no." v={report.ticket} mono />
           <Row k="Motorist" v={report.motorist} />
@@ -150,4 +157,4 @@ export default function ReportDrawer({ report, adminName, onClose }) {
       </div>
     </div>
   );
-}
+}

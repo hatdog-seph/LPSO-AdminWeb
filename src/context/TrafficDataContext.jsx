@@ -46,7 +46,7 @@ const fromOrdinanceRow = (row) => ({
 
 const REPORT_SELECT = `
   report_id, citation_id, enforcer_id, category, description, contact_info,
-  status, admin_notes, reviewed_by, reviewed_at, created_at, updated_at,
+  evidence_photos, status, admin_notes, reviewed_by, reviewed_at, created_at, updated_at,
   citation:citation_id ( ticket_number, motorist_full_name, status, fine_amount ),
   enforcer:enforcer_id ( full_name, badge_number )
 `;
@@ -71,6 +71,8 @@ function fromReportRow(row) {
     category: row.category,
     description: row.description,
     contactInfo: row.contact_info,
+    // storage paths in the private "report-evidence" bucket
+    evidencePhotos: Array.isArray(row.evidence_photos) ? row.evidence_photos : [],
     status: row.status,
     statusLabel: REPORT_STATUS_LABELS[row.status] || row.status,
     adminNotes: row.admin_notes,
